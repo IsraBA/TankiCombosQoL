@@ -33,8 +33,8 @@ negotiable —
 
 That was a deliberate, accepted trade-off (the alternative — optional permissions
 plus an opt-in popup — was considered and rejected as too much complexity). The
-listing text below still carries one scoped sentence about it; drop that sentence
-once the pre-3.0 population has aged out.
+listing text below does not scope it to pre-3.0 users — see the note under the
+description.
 
 In-extension, v4.0 announces itself: opening the COMBOS tab after the update
 shows a one-time note of what changed, and the lobby button carries a badge until
@@ -52,38 +52,55 @@ description, re-check that it still fits.
 
 ### Detailed description
 
-⚠️ The live description predates v4.0: it lists combos-only slots, says the
-randomizer and nothing about protection recommendations, and leads with a
-permission notice that this update does not need. Replace the whole field with
-the text below (1,597 of 16,000 chars).
+This is the developer's final v4.0 wording (1,052 of 16,000 chars). Replace the
+whole field with it — the live description predates v4.0 and lists combos-only
+slots with nothing about protection recommendations.
 
 Keep it short. Nobody reads a wall of marketing copy on a store page, and the
 screenshots carry the detail anyway.
 
+> **Known mismatch in the last paragraph.** It says Chrome disables the
+> extension until a new permission is approved. That is the v3.0 situation:
+> **v4.0 adds no permissions**, so nobody is disabled and no puzzle-icon badge
+> appears. Kept at the developer's choice — it is harmless for the pre-3.0
+> users who do still hit it, and it is a standing service notice for whichever
+> future release does add one. If a v4.0 user reports "it told me to approve
+> something and there was nothing to approve", this is why.
+
 ```
 COMBOS
-Save a full garage setup - turret, hull, both augments, drone, grenade, protections, paint and skins - and equip it again in one click. It goes through the game's own equipment actions, so there is no clicking around the tabs and no flicker. Name and reorder your combos, skip individual slots, import/export, or let the randomizer choose. Open it from the garage menu, or press C in the lobby.
+Save a full garage setup - turret, hull, both augments, drone, grenade, protections, skins, paint - and equip it again in one click. Name and reorder your combos, skip individual slots, import/export, or let the randomizer choose. Open it from the garage menu, or press C in the lobby.
 
 PROTECTION RECOMMENDATIONS
-In a battle, duck into the garage and the Protection tab tells you which modules are worth wearing against this enemy team - ranked by the turrets that are actually getting kills, not by guesswork. One button equips the whole set. It is all worked out in your browser from what the game already knows; nothing about the battle or the players in it is sent anywhere.
+Recommends which protections to take mid-battle, based on the battle data and the strongest players on the enemy team.
 
 CHAT TRANSLATION
 Foreign battle chat, translated in place on the game screen. Pick your language in the game's Settings. Alt+T switches back to the original, and you can turn translation off entirely - combos keep working.
-Hebrew and Arabic chat also reads the right way round again - the game itself draws it reversed, and the extension fixes that on screen without sending anything anywhere.
 
 Free, no ads, no account, no automation and no gameplay advantage. Your combos stay in your browser; the only thing that ever leaves it is the text of a message being translated.
 
-This update adds no new permissions. (Coming from a version older than 3.0? Chrome will ask you to approve the translation permission once - click the puzzle icon in your toolbar and accept.)
+Updating from an older version? Chrome disables the extension until you approve the new permission - click the puzzle icon in your toolbar and accept. Once, and you're done.
 
 Bugs or ideas - Discord: isra760
 ```
 
-Four things in there are not padding and should survive future edits: the
+Three things in there are not padding and should survive future edits: the
 permission line (a service notice — without it an update that *does* add a
 permission reads as "the extension broke"), the one-line privacy statement (heads
-off "wait, you send my chat where?"), the sentence saying the recommendations are
-computed locally (a feature that reads a live battle is exactly what a reviewer
-will ask about), and "no gameplay advantage" (it matters in a game community).
+off "wait, you send my chat where?"), and "no gameplay advantage" (it matters in
+a game community).
+
+Two things earlier drafts carried and this one drops, deliberately — worth
+knowing so they are not "restored" by mistake, and worth reconsidering if a
+reviewer ever pushes back:
+
+- **That the recommendations are computed locally.** A feature that reads a live
+  battle is the one a reviewer is most likely to ask about, and the privacy
+  sentence above only mentions chat. The answer is in `docs/PRIVACY.md` if it is
+  ever needed.
+- **The RTL chat fix**, and the note that equipping goes through the game's own
+  actions. Both are real, both are just detail the developer judged unnecessary
+  on the store page.
 
 Two claims from the pre-3.0 description were deliberately dropped and must not
 come back:
