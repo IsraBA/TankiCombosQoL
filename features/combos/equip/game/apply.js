@@ -9,7 +9,7 @@
   const NS = (W.__CMB = W.__CMB || {});
   const I = (NS.internals = NS.internals || {});
 
-  // ההשהיה אינה דרישה של המשחק — היא רק כדי שרצף פקודות לא ייראה חריג
+  // פיזור בקשות: החלה מיידית שולחת עשר פקודות במילישנייה אחת
   const DEFAULT_DELAY_MS = 80;
   const DELAY_JITTER_MS = 40;
 

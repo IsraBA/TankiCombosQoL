@@ -22,8 +22,11 @@ item depends on live state (owned? which Mk? already mounted?) which only exists
 there. One message out, a per-slot report back.
 
 Order: base items → decorative → protections → augments, with a short randomised
-pause (80±40 ms) between actions. The pause is not a game requirement; it exists
-so a burst of ten commands in one millisecond doesn't look odd.
+pause (80±40 ms) between actions. The pause is **request pacing**, not a game
+requirement: applying a combo instantly would otherwise fire around ten garage
+commands inside a single millisecond. Each one is an ordinary action the server
+validates like any other, so spacing them out changes nothing about what is sent
+— it only avoids handing the game a burst in one tick.
 
 Two outcomes matter and mean different things:
 
