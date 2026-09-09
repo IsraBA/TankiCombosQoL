@@ -48,16 +48,45 @@ chat.js (MAIN)  --postMessage 'translate'-->  bridge.js (ISOLATED)
 translate.js resolves the Promise        background.js (service worker)
    ^                                              |  fetch() with host_permissions
    |  <--postMessage 'translateResult'--          v
-   +------------------------------------  Google (unofficial) -> Lingva fallback
+   +------------------------------------  translate_a/t -> translate_a/single
+                                          (both client=dict-chrome-ex)
 ```
 
 - **`translate.js`** (MAIN) owns the per-session cache (keyed by
   `targetLang + '\n' + text`) and a hard request timeout, so a hung backend can
   never leave a message stuck on its spinner.
-- **`background.js`** runs the backend chain: unofficial Google
-  (`translate_a/single`, which reports the detected source language — that's why
-  it's first) → Lingva instances (translation only, no source language, so the
-  prefix becomes `[文]`).
+- **`background.js`** runs the backend chain. Both legs report the detected
+  source language, so the `[RU]` prefix survives a failover:
+
+  | # | Backend | Notes |
+  |---|---|---|
+  | 1 | `translate_a/t?client=dict-chrome-ex` | what Chrome's own translate feature uses. `[[text, lang]]`, **plain text**, the flattest reply of any option |
+  | 2 | `translate_a/single?client=dict-chrome-ex` | per-sentence segments (`d[0][i][0]`), source lang in `d[2]`. Returns an intermittent HTTP 500, which is survivable *because* it is second |
+
+  Both are GET with the text in the query string, so this design assumes
+  chat-sized strings.
+
+- **The client id carries the quota, not the endpoint.** `dict-chrome-ex` is
+  Chrome's own; it took 100+ calls in a sitting with zero rejections, while
+  `gtx` and `at` both start returning 429 within a single 20-call burst. That is
+  why leg 2 does *not* switch client id: it buys **endpoint** diversity (a shape
+  change or outage on `/translate_a/t`), and switching to a rate-limited id
+  would make it useless exactly when it is needed.
+- **Everything stays on `translate.googleapis.com`, deliberately.** Adding a
+  host is a privilege increase, and Chrome then **disables the extension for
+  every existing user** until each re-accepts (see `docs/STORE.md` §1). A
+  bugfix must never cost that, so the chain was built inside the one host
+  already granted. Working alternatives exist if that ever becomes acceptable:
+  `translate-pa.googleapis.com/v1/translateHtml` (POST, the current widget's
+  endpoint — translates *HTML*, so the reply needs tag-stripping and entity
+  decoding) and `api.mymemory.translated.net` (a different provider entirely,
+  so it survives a Google-wide block; loose wording, small anonymous quota,
+  and it signals errors/quota as **HTTP 200** with the reason in the envelope).
+- **Language normalization**: Google still reports `iw` (Hebrew), `in`
+  (Indonesian) and regional `zh-CN`, while our target codes are the bare modern
+  form. `chat.js` compares source against target to decide whether to draw a
+  prefix, so without `normalizeLang()` a Hebrew user sees `[IW] » <same text>`
+  on their own language. This was latent in the old `gtx` path too.
 - **Why the service worker at all**: in MV3 there is no `GM_xmlhttpRequest`, and
   a content-script fetch is subject to the page's CORS policy; the translation
   endpoints don't reliably send permissive headers. Only the SW may read
@@ -65,10 +94,47 @@ translate.js resolves the Promise        background.js (service worker)
   don't rely on module state surviving between calls.
 
 The free chain is a **permanent** choice; there is no plan to move to a paid API.
-Honest risk: the unofficial Google endpoint is not a supported API and could
-change or rate-limit. If it dies, Lingva takes over automatically. To
-add/replace a Lingva instance, edit `LINGVA_INSTANCES` in `background.js` **and**
-add the host to `host_permissions`.
+Honest risk: neither endpoint is a supported API — they can change or rate-limit
+at any time. To add or replace a backend, write the call in `background.js` and
+add it to the `attempts` array in `translate()`. If it needs a host that is not
+already in `host_permissions`, read the privilege-increase note above first —
+that is a listing-wide decision, not a code one.
+
+### Precedent: the Sep 2026 outage
+
+Symptom the user reported — *"translation works only rarely, mostly not"*.
+
+The old chain was `translate_a/single?client=gtx` → two Lingva instances, and
+all three had died:
+
+| Old backend | State |
+|---|---|
+| `translate_a/single?client=gtx` | **HTTP 429** on nearly every call — the "works rarely" part. Not a format change; Google simply stopped serving that client id at this volume |
+| `lingva.lunar.icu` | HTTP 500 `"error occurred while retrieving the translation"` |
+| `lingva.ml` | Cloudflare `"Just a moment..."` interstitial — unusable from a `fetch()` |
+
+The whole public Lingva network is down, not just those two: `lingva.ml`,
+`lingva.garudalinux.org` (Cloudflare), `translate.plausibility.cloud` (500),
+`lingva.thedaviddelta.com` (503), and three more that no longer resolve. Lingva
+proxies Google, so whatever broke `gtx` broke the proxies with it. **Don't
+reach for a Lingva instance as a fallback again without testing it first.**
+
+Lessons, in the order they cost time:
+
+1. **A 429 is not an API change.** Before rewriting a parser, `curl` each
+   backend and read the status code. The fix here was a different **client id**
+   on the same API — no new host, no new provider, and the reply shape was
+   *simpler* than the old one.
+2. **Re-test a fallback after the burst that "proved" it.** `client=at` passed
+   20/20 and looked like the obvious second leg; it was 429 on every call ten
+   minutes later, having been rate-limited by that very burst. A backend
+   verified once is not verified — check it again once the quota has been
+   exercised, or you ship a fallback that fails exactly when it is called on.
+3. **Check `host_permissions` before designing the chain.** The first version
+   of this fix added two hosts for cross-provider resilience, which would have
+   auto-disabled the extension for all 500+ users to ship a bugfix. Scope the
+   solution to the hosts already granted unless the resilience is worth a
+   forced re-approval.
 
 ## MAIN-world API
 

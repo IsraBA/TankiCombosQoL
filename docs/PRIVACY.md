@@ -15,8 +15,8 @@ written to be honest and specific — please read it before installing.
   transmitted anywhere.
 - **The chat translation feature is the only thing that sends anything out of your
   browser**: to translate a chat message, the text of that message is sent to a
-  third-party translation service (Google Translate / Lingva). Nothing else ever
-  leaves your browser.
+  third-party translation service (Google Translate). Nothing else ever leaves
+  your browser.
 - The extension has **no server of its own**, collects **no personal
   information**, uses **no analytics or tracking**, and **stores no chat history**
   anywhere.
@@ -57,8 +57,9 @@ The third-party services used are:
 
 - **Google Translate** (`translate.googleapis.com`) — see Google's Privacy
   Policy: https://policies.google.com/privacy
-- **Lingva Translate** (a privacy-focused Google Translate proxy), used as a
-  fallback — see https://github.com/thedaviddelta/lingva-translate
+
+This is the only third party the extension contacts. Message text is sent to
+Google and nowhere else.
 
 These services are operated by third parties. We do not control how they process
 requests, and their privacy policies govern their handling of the text. The
@@ -124,8 +125,8 @@ them or uninstall the extension.
   items, inject the extension's UI, read the battle you are in so it can
   recommend protection modules, and read the game script in order to locate the
   chat UI.
-- **access to the translation services** (`translate.googleapis.com`,
-  `lingva.lunar.icu`, `lingva.ml`) — to send message text for translation.
+- **access to the translation service** (`translate.googleapis.com`) — to send
+  message text for translation.
 
 ## Your choices
 

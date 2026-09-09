@@ -219,7 +219,7 @@ sent anywhere is the text of a chat message you asked to have translated.**
 | --- | --- |
 | `storage` | saves your combos and settings locally |
 | `*://*.tankionline.com/*` | the game page — read equipped items, inject the UI, locate the chat UI |
-| `translate.googleapis.com`, `lingva.lunar.icu`, `lingva.ml` | send message text to be translated |
+| `translate.googleapis.com` | send message text to be translated |
 
 - Combos, names, order and settings are stored with the browser's extension
   storage. They are never transmitted.
@@ -227,7 +227,7 @@ sent anywhere is the text of a chat message you asked to have translated.**
   data the game has already sent to it. Nothing about the battle, the players in
   it or your equipment is sent anywhere.
 - When translation is enabled, the **text of a chat message** is sent to Google
-  Translate (with Lingva as a fallback) to get the translation back. Only the text
+  Translate to get the translation back. Only the text
   and your target language are sent — no username, no sender identity, no other
   metadata. Nothing is sent while translation is off, and slang-only messages are
   never sent at all.
@@ -266,7 +266,7 @@ feature is self-contained under `features/`; only UI components are shared.
 ┌──────────────────────────┴──────────────────────────────────┐
 │  background.js (service worker)                              │
 │    the only context allowed the cross-origin fetch           │
-│    Google Translate → Lingva fallback                        │
+│    Google Translate (two endpoints, first success wins)      │
 └──────────────────────────────────────────────────────────────┘
 ```
 

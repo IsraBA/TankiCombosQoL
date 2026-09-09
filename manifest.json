@@ -1,14 +1,12 @@
 {
   "manifest_version": 3,
   "name": "Tanki Online — Combos & QoL",
-  "version": "4.0",
+  "version": "4.1",
   "description": "Quality-of-life tools for Tanki Online: save and switch full equipment combos in one click, and translate battle chat in real time.",
   "permissions": ["storage"],
   "host_permissions": [
     "*://*.tankionline.com/*",
-    "https://translate.googleapis.com/*",
-    "https://lingva.lunar.icu/*",
-    "https://lingva.ml/*"
+    "https://translate.googleapis.com/*"
   ],
   "background": {
     "service_worker": "background.js"

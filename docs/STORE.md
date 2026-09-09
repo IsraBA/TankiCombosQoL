@@ -9,16 +9,33 @@ The extension is already published with 500+ users, so every upload is an
 - **v3.0** added chat translation, which changed the name, the permissions and —
   for the first time — the fact that user data is transferred to a third party.
   Everything in sections 3 and 4 dates from there and still holds.
-- **v4.0** (current) adds protection recommendations, rewrites combos to apply
-  through the game's own model, and adds paint and skins as combo slots. It adds
-  **no permissions and no data transfer**, so only the listing text below needs
-  changing — the Privacy tab is unaffected.
+- **v4.0** adds protection recommendations, rewrites combos to apply through the
+  game's own model, and adds paint and skins as combo slots. It adds **no
+  permissions and no data transfer**, so only the listing text below needed
+  changing — the Privacy tab was unaffected.
+- **v4.1** (current) is a **bugfix-only** upload: Google stopped serving the
+  translation endpoint the extension called (HTTP 429), so chat translation had
+  degraded to "works rarely". Backend repaired inside the existing host; the two
+  dead Lingva hosts were dropped from `host_permissions`. **Nothing to change in
+  the dashboard** — no new permission, no new third party, no listing-text or
+  Privacy-tab edit. Just upload the ZIP. The only field worth touching is
+  "What's new" (below), and even that is optional.
 
 ## 1. Read this first: what changes for existing users
 
-**v4.0 changes nothing about permissions.** `permissions` and `host_permissions`
-are byte-identical to the published version, so the update installs silently and
-nobody is disabled. Do not repeat the v3.0 service notice as though it applied.
+**v4.0 grants no new permission.** `permissions` is unchanged and
+`host_permissions` only ever *shrank* — the two dead Lingva hosts were dropped
+when the translation backend was repaired (Sep 2026); `translate.googleapis.com`
+is the sole remaining translation host. Dropping a host is not a privilege
+increase, so the update installs silently and **nobody is disabled**. Do not
+repeat the v3.0 service notice as though it applied.
+
+> Keep it that way. The Sep 2026 backend fix was deliberately built inside
+> `translate.googleapis.com` — the host already granted — precisely so that
+> restoring a broken feature would not force 500+ users through re-approval.
+> Cross-provider fallbacks were tested and are documented in
+> `CLAUDE.mds/translator.md`, but shipping one means accepting the disable
+> below. That is a listing decision, not a code decision.
 
 The v3.0 situation, kept because pre-3.0 users still exist and still hit it:
 adding `translate.googleapis.com` and the Lingva hosts to `host_permissions` was
@@ -112,7 +129,13 @@ come back:
   covers an extension that reads and redraws battle chat and reads the battle
   roster.
 
-### "What's new" field for v4.0
+### "What's new" field for v4.1  (current upload)
+
+```
+Fixes chat translation, which had stopped working for most messages because the translation service stopped answering the request the extension was making. Translation now goes through a different Google Translate endpoint, with a second one as a fallback. Also fixes the language tag shown on Hebrew and Chinese messages. No new permissions.
+```
+
+### "What's new" field for v4.0  (already published — kept for reference)
 
 ```
 Combos now equip through the game's own equipment actions - instant, no flicker, no walking the tabs. Paint and skins are part of a combo. New: protection recommendations, which read the battle you are in and tell you what to wear against the enemy team, with one button to equip it all. The combo you are wearing is marked, duplicates are no longer kept, and the game's own equip cooldown is respected. No new permissions.
@@ -167,8 +190,11 @@ The storage permission is used to save the user's own data: their saved garage c
 ```
 tankionline.com: the extension runs only on the Tanki Online game page. It needs page access to read which items are currently equipped, to inject its own UI into the garage, lobby, protection and settings screens, to read the state of the battle the player is in so it can recommend which protection modules to wear, and to read the game's own already-loaded script in order to locate the chat UI, which is minified and changes with every game update. Everything read from the page, from the game's own state and from that script is used and discarded in the browser; none of it is transmitted.
 
-translate.googleapis.com, lingva.lunar.icu, lingva.ml: to translate a battle-chat message, the text of that message is sent to a translation service and the result is displayed in place on the game screen. Only the message text and the user's chosen target language are sent. Lingva is a fallback used when the primary service is unavailable. The extension does not access any other websites.
+translate.googleapis.com: to translate a battle-chat message, the text of that message is sent to Google Translate and the result is displayed in place on the game screen. Only the message text and the user's chosen target language are sent. The extension does not access any other websites.
 ```
+
+> The char count above predates the Sep 2026 trim of this paragraph; it is now
+> shorter, and still well inside the limit.
 
 ### "Are you using remote code?"
 
