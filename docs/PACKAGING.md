@@ -36,6 +36,7 @@ meant to be read there.
 |---|---|
 | `manifest.json` | required |
 | `background.js` | service worker (translation fetch) |
+| `LICENSE` | the GPL-3.0 text. It does not run, and it ships anyway: the licence requires a copy to travel with every distributed copy of the program, and the store package is a distribution |
 | `shared/**` | UI components loaded by both features |
 | `features/**` | both features' code, CSS, and the flag SVGs (the flags **are** loaded at runtime by the in-game language dropdown, via `web_accessible_resources`) |
 | `assets/icons/icon16.png`, `icon48.png`, `icon128.png` | the three icon sizes the manifest declares |

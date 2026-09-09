@@ -24,6 +24,8 @@ if (-not $version) { throw 'Could not read "version" from manifest.json.' }
 $includeFiles = @(
     'manifest.json',
     'background.js',
+    # ה-GPL מחייב למסור עותק של הרישיון יחד עם התוכנה
+    'LICENSE',
     'assets/icons/icon16.png',
     'assets/icons/icon48.png',
     'assets/icons/icon128.png'

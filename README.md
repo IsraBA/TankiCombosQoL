@@ -402,4 +402,23 @@ multi-language, per-item removal.
 
 ---
 
+## 📄 License
+
+Copyright © 2025–2026 IsraBA.
+
+This program is free software: you can redistribute it and/or modify it under
+the terms of the **GNU General Public License, version 3** as published by the
+Free Software Foundation. See [LICENSE](LICENSE) for the full text.
+
+In plain terms: read it, learn from it, fork it, build on it. But if you
+distribute something that contains this code — a browser extension, a userscript,
+anything — that work has to be released under the GPL as well, with its source
+available. This code may not be absorbed into a closed-source or paid product.
+
+It is distributed in the hope that it will be useful, but **without any
+warranty**; without even the implied warranty of merchantability or fitness for
+a particular purpose.
+
+---
+
 [Issues](https://github.com/IsraBA/TankiCombosQoL/issues)
