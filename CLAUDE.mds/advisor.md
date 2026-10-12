@@ -75,7 +75,7 @@ A field owned by a *foreign* trap (combos, another extension) is still skipped �
 `__ADV.debug.skipped` counts those. `test_advisor_probe.js` guards all of it.
 
 The invariant discovery leans on — ctor order == `toString` order, and the
-field counts (13/27/2/32) — held on 9/9 bundles;
+field counts (13/27/2/32) — held on 11/11 bundles (41560f11 … 8f7f4827);
 `build/harnesses/test_advisor_discover.js` re-checks every bundle in
 `research/` and diffs the current build against the SEED.
 

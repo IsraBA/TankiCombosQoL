@@ -96,8 +96,8 @@ own console context instead.
 | the 3D tank is blank / won't drag while the combos view is open           | a preview host ended up `display:none` — look for an inline `display:none` on `PREVIEW_HOSTS` **without** `data-cme-preview-hidden`, which means something outside `keepTankPreviewAlive` hid it |
 | the advisor block never appears in the protection tab                     | check `__ADV.raw()`: `battle` not loaded (no battle), the equip cooldown is active, or no module passes the 30% bar. `__ADV.debug` counters at 0 mean the traps never fired — a new build rotated the field names AND discovery failed: `discovered === false` means `recon/detect.js` never delivered (fetch failed, or `discover()` returned null — run `test_advisor_discover.js` on the new bundle) |
 | advisor slots show item boxes instead of the small turret icons           | the icon harvest from the game's list found nothing (virtualised list?) and the fallback images are in use — cosmetic, `panel_render.js` `harvestIcons`                                          |
-| the HUD editor's screen is empty ("enter a battle once")                  | nothing was ever measured for this layout: `__HUD.debug.measures === 0`. Either no battle was entered with the extension on, or the offsets are stale (below)                                    |
-| the HUD editor shows some elements but not others                         | those elements were hidden every time a measurement ran. `__HUD.measure()` in battle shows what is currently measurable; records merge per element, so entering a battle where they show fixes it |
+| the HUD editor's screen is empty ("enter a battle once")                  | no geometry at all: discovery returned nothing (`TankiQoL.HudRecipes.get()` is `null` — run `test_hud_builds.js` on the new bundle) **and** neither the seed nor a measurement covers this layout |
+| the HUD editor shows some elements but not others                         | `TankiQoL.HudRecipes.get().covered` lists what discovery read; the rest come from the seed or a battle measurement. The kill log is measurement-only by design. A missing canvas element means its extractor in `discovery/` stopped matching |
 | another extension's battle-HUD tweaks stop working (e.g. Tanki Tweaks' Tab table turns half-transparent) | something of ours put a game class name of the battle HUD on the page — they watch the document for them. The hidden copy must use `HudDomCatalog.ghostClass` names only (`cme_` + the game's name) |
 | nothing moves in battle although the editor saved it                      | `__HUD.nodes()` — if `role` is `null` everywhere, the add-site table is wrong for this build. `__HUD.debug.names === "seed"` on a new build means discovery never delivered: check `TankiQoL.HudRecipes.get()` (null = `engine.js` failed), and run `test_hud_builds.js` with the new bundle in `research/` — it names the anchor that broke |
 | an element jitters or drifts every frame                                   | a layout pass is being transformed: `__HUD.debug.layoutCalls` should climb while `renderCalls` climbs too. A new element type whose `o4o` was not wrapped will do this                            |
@@ -162,7 +162,6 @@ shared minimal DOM the UI harnesses build real elements in):
   region that takes pointer events back (see the tank-preview section of
   `combos.md`). It cannot tell you whether the layer actually behaves — only a
   browser can.
-
 - **`test_hud_builds.js`** — the whole HUD discovery on **every** bundle in
   `research/`: every name MAIN needs, one add site per element (five for the
   status), the full geometry, identical across builds; `7f05e212` and
@@ -170,9 +169,10 @@ shared minimal DOM the UI harnesses build real elements in):
   the seed in `capture/game/names.js`. ~17 s. Drop a new bundle in `research/`
   and run it before anything else.
 - **`test_hud_discovery.js`** — the geometry parser against the **real bundle**
-  in `research/`: the four scaling strategies are identified, and the recipes for
-  the radar, bars, overdrive, grenades and supplies come out of the game's own
-  literals and **reproduce the developer's live measurement** — logical box and
+  in `research/`: the four scaling strategies are identified, the recipes for
+  the radar, bars, effects, chat, status, overdrive, grenades and supplies come
+  out of the game's own literals, the SVG URLs and the rank image resolve, and
+  the measured ones **reproduce the developer's live measurement** — logical box and
   pixel rect, to a hundredth of a pixel, in both layouts. It is the check that
   ties the static read to what the game actually draws; if a new build moves the
   numbers, this is what says so.
@@ -186,9 +186,9 @@ shared minimal DOM the UI harnesses build real elements in):
   row splits by screen side, the transform moves/scales/fades only the element
   it was given, a draw inside a layout pass is left alone, and the bridge
   answers — and that a new build's names (`hudGame`) re-arm the traps on the
-  new fields, while a partial set is ignored. The editor one drives the stage over the fake DOM: drag, the 5 px
-  click threshold, overlap refusal, edge clamping, locked elements, undo and
-  reset.
+  new fields, while a partial set is ignored. The editor one drives the stage
+  over the fake DOM: drag, the 5 px click threshold, snapping, overlap refusal,
+  edge clamping, locked elements, the push, undo and reset.
 - **`test_hud_dom.js`** — the HTML elements and the chat's opacity, on a fake
   DOM and a fake WebGL. The preferences land on the live nodes as
   translate/scale/opacity about the right origin (the chat input about the

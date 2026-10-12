@@ -37,8 +37,8 @@ meant to be read there.
 | `manifest.json` | required |
 | `background.js` | service worker (translation fetch) |
 | `LICENSE` | the GPL-3.0 text. It does not run, and it ships anyway: the licence requires a copy to travel with every distributed copy of the program, and the store package is a distribution |
-| `shared/**` | UI components loaded by both features |
-| `features/**` | both features' code, CSS, and the flag SVGs (the flags **are** loaded at runtime by the in-game language dropdown, via `web_accessible_resources`) |
+| `shared/**` | UI components loaded by more than one feature |
+| `features/**` | every feature's code, CSS, and the flag SVGs (the flags **are** loaded at runtime by the in-game language dropdown, via `web_accessible_resources`) |
 | `assets/icons/icon16.png`, `icon48.png`, `icon128.png` | the three icon sizes the manifest declares |
 
 ## What must NOT ship
@@ -59,7 +59,7 @@ meant to be read there.
 - [ ] **Bump `version` in `manifest.json`.** CWS rejects a re-upload of an
       existing version.
 - [ ] Load unpacked and run the full manual test pass in `CLAUDE.mds/store.md` →
-      "Testing" (both features).
+      "Testing" (every feature).
 - [ ] Run the script and skim its printed file list.
 - [ ] Host `docs/PRIVACY.md` publicly (GitHub Pages / Gist) and put that URL in
       the dashboard's **Privacy policy URL** field — mandatory now that the
@@ -69,5 +69,6 @@ meant to be read there.
 - [ ] **Check whether this release changes `permissions` or `host_permissions`.**
       Any addition is a privilege increase, and Chrome then **disables the
       extension for every existing user until they re-approve** — expect support
-      questions and say so in the listing's "What's new". v4.0 adds none, so
-      nothing is disabled; v3.0 did, which is where that warning comes from.
+      questions and say so in the listing's "What's new". v4.0, v4.1 and v5.0
+      add none, so nothing is disabled; v3.0 did, which is where that warning
+      comes from.

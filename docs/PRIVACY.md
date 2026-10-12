@@ -1,18 +1,19 @@
 # Privacy Policy — Tanki Online: Combos & QoL
 
-**Last updated: 1 September 2026**
+**Last updated: 12 October 2026**
 
 Tanki Online: Combos & QoL ("the extension") is a browser extension that adds
 quality-of-life tools to the game at tankionline.com: saving and switching
 equipment setups ("combos"), recommending protection modules against the enemy
-team in the battle you are in, and translating in-game battle chat. This policy
+team in the battle you are in, rearranging the battle screen's HUD, and
+translating in-game battle chat. This policy
 explains exactly what data the extension processes and what it does not. It is
 written to be honest and specific — please read it before installing.
 
 ## Summary (plain language)
 
-- Your combos and settings are stored **locally in your browser**. They are never
-  transmitted anywhere.
+- Your combos, your HUD arrangement and your settings are stored **locally in
+  your browser**. They are never transmitted anywhere.
 - **The chat translation feature is the only thing that sends anything out of your
   browser**: to translate a chat message, the text of that message is sent to a
   third-party translation service (Google Translate). Nothing else ever leaves
@@ -25,10 +26,11 @@ written to be honest and specific — please read it before installing.
 
 ### 1. Your combos and settings (stored locally)
 
-The equipment setups you save, their names and order, and your preferences
+The equipment setups you save, their names and order, the position, size and
+transparency you give each element of the battle HUD, and your preferences
 (including the translation feature's on/off state and your chosen target
-language) are stored using the browser's own extension storage. Combos are stored
-locally on your device. Your small translation preferences use the browser's
+language) are stored using the browser's own extension storage. Combos and the
+HUD arrangement are stored locally on your device. Your small translation preferences use the browser's
 sync storage, which means that if you are signed into your browser, the browser
 vendor may sync them across your own devices — this is handled entirely by your
 browser, and the data contains no personal information.
@@ -68,18 +70,23 @@ server we operate (because we operate none).
 
 ### 3. The game's own script file (read locally, not transmitted)
 
-To locate the chat UI inside the game — which is minified and changes with every
-game update — the extension reads the game's own JavaScript file from
-tankionline.com (the same file your browser already loaded) and searches it for
-the relevant code. This file is only **read and parsed in your browser**; nothing
-from it is transmitted anywhere. The result (a small set of internal names) is
-cached locally so it isn't re-parsed on every load.
+To locate the parts of the game it works with — the chat, the garage, the battle
+state and the battle HUD, all minified and changing with every game update — the
+extension reads the game's own JavaScript file from tankionline.com (the same
+file your browser already loaded) and searches it for the relevant code. For the
+HUD editor it also reads where the game places each HUD element and which of the
+game's own images it draws them with, so the editor can show them. This file is
+only **read and parsed in your browser**; nothing from it is transmitted
+anywhere. The result (a small set of internal names and layout numbers) is cached
+locally so it isn't re-parsed on every load.
 
 ### 4. The game's page content (read locally, not transmitted)
 
 To detect your currently equipped items and to add its own buttons and panels, the
-extension reads and modifies the game page in your browser. Nothing read from the
-page is transmitted anywhere.
+extension reads and modifies the game page in your browser. In battle, the HUD
+editor's arrangement is applied by changing where and how large the game draws
+each HUD element on your own screen — nothing about the game itself, and nothing
+anyone else sees, is changed. Nothing read from the page is transmitted anywhere.
 
 ### 5. The battle you are in (read locally, not transmitted)
 
@@ -120,11 +127,11 @@ them or uninstall the extension.
 
 ## Permissions the extension requests, and why
 
-- **storage** — to save your combos and your settings.
+- **storage** — to save your combos, your HUD arrangement and your settings.
 - **access to tankionline.com** — to run on the game page: to read your equipped
   items, inject the extension's UI, read the battle you are in so it can
-  recommend protection modules, and read the game script in order to locate the
-  chat UI.
+  recommend protection modules, apply your HUD arrangement, and read the game
+  script in order to locate the parts of the game it works with.
 - **access to the translation service** (`translate.googleapis.com`) — to send
   message text for translation.
 

@@ -15,12 +15,13 @@ for DOM work, but two things need more:
 
 | Context | Who runs there | Has |
 |---|---|---|
-| ISOLATED | all of combos (DOM + discovery + bridge), translator `isolated/` | `chrome.storage`, `chrome.runtime`; no access to page JS |
-| MAIN | `features/combos/**/game/*`, `features/translator/main/*` | the page `window`; no `chrome.*` |
+| ISOLATED | every UI, every bundle discovery and every bridge's ISOLATED side: combos, advisor (`recon/` discovery, model, view), HUD (`discovery/`, model, `dom/`, editor), translator `isolated/` | `chrome.storage`, `chrome.runtime`; no access to page JS |
+| MAIN | every `game/` folder (combos, advisor, HUD), `features/translator/main/*` | the page `window`; no `chrome.*` |
 | Service worker | `background.js` | `fetch` with `host_permissions` |
 
 The two worlds talk over `window.postMessage`, every message tagged (`__cmb` for
-combos, `__ct` for the translator) with a direction (`i2m` / `m2i`) and a
+combos, `__adv` for the advisor, `__hud` for the HUD editor, `__ct` for the
+translator) with a direction (`i2m` / `m2i`) and a
 `ready` handshake covering the race where one side broadcasts before the other's
 listeners exist.
 
@@ -31,20 +32,20 @@ Content scripts can't use ES modules, so modules share namespace objects on
 
 | Namespace | World(s) | Holds |
 |---|---|---|
-| `window.TankiQoL` | ISOLATED (combos + advisor) + MAIN (translator) | the shared components (`.Switch`, `.Select`, `.Drawer`, `.Icons`), and in ISOLATED every combos and advisor module (`.DOM`, `.ViewRenderer`, `.GarageBridge`, `.AdvisorPanel`, …) |
+| `window.TankiQoL` | ISOLATED (combos + advisor + HUD) + MAIN (translator, and the HUD's `HudElements`) | the shared components (`.Switch`, `.Select`, `.Drawer`, `.Button`, `.Slider`, `.Dialog`, `.Icons`), and in ISOLATED every combos, advisor and HUD module (`.DOM`, `.ViewRenderer`, `.GarageBridge`, `.AdvisorPanel`, `.HudEditor`, `.HudRecipes`, `.HudParse`, …) |
 | `window.__CT` | MAIN | translator internals: `.settings`, `.translate`, `.skip`, `.bidi`, `.rebuild()` |
 | `window.__CMB` | MAIN | garage hook: `.read()`, `.index()`, `.names()`, `.state()`, `.debug`, and `.internals` (shared by every `game/` file) |
 | `window.__ADV` | MAIN | advisor battle probe: `.debug`, `.raw()`, and `.internals` (shared by its `game/` files) |
 | `window.__HUD` | MAIN | HUD editor: `.debug`, `.state()`, `.nodes()`, `.groups()`, `.measure()`, `.overrides()`, and `.internals` |
 | `__CT_*` | MAIN | translator console helpers — see `debugging.md` |
 
-## manifest.json — 9 content-script blocks
+## manifest.json — 10 content-script blocks
 
 JSON has no comments, so the reasoning lives here. **Do not merge these blocks.**
 
 | # | Contents | `run_at` | World | Why separate |
 |---|---|---|---|---|
-| 0 | **all CSS** | `document_start` | n/a | CSS is not world-scoped, so one block serves both features. Early injection avoids a flash of unstyled injected UI. Array order = cascade order. |
+| 0 | **all CSS** | `document_start` | n/a | CSS is not world-scoped, so one block serves every feature. Early injection avoids a flash of unstyled injected UI. Array order = cascade order. |
 | 1 | translator `isolated/` | `document_start` | ISOLATED | The only place with `chrome.*`. Must start early so bundle discovery finishes before the user enters a battle. |
 | 2 | combos `discovery/` + `bridge/bridge.js` | `document_start` | ISOLATED | Same reason for the garage hook: discovery must finish before the garage opens. Also defines `TankiQoL.GarageBridge`, which block 5 uses. |
 | 3 | every combos `game/` file | `document_start` | MAIN | Needs the page's own `window` for the `Object.prototype` traps. Must be `document_start` — the state is built later, but the trap has to be armed first. |
@@ -78,8 +79,8 @@ loads.** Within block 5 the order is:
    equips through combos' `InstantLoader`
 7. `features/hud/` — last, because the editor uses the shared components and
    combos' `DOM` selectors. Inside it: `model/` (without `rects.js`, and
-   without `layout.js`, which block 3d already loaded); bridge, store; `dom/` — catalog, markup, ghost; then
-   `model/rects.js`, which reads the ghost; `dom/apply.js`; `editor/` — shapes,
+   without `layout.js`, which block 3d already loaded); bridge, store; `dom/` —
+   catalog, markup, ghost; then `model/rects.js`, which reads the ghost; `dom/apply.js`; `editor/` — shapes,
    `stage_rules.js` before `stage.js`, drag, topbar, viewport, `editor_screen.js`,
    settings button; `main.js`
 
@@ -164,7 +165,8 @@ features/combos/
 │   │                          #   combo_drag_handler, combo_card.css
 │   ├── lobby/                 #   button, C shortcut, auto-open, lobby_button.css
 │   └── panels/                #   delete modal, randomizer settings, import/export,
-│                              #   whats_new_modal (once per NEWS_VERSION)
+│       │                      #   whats_new_modal (once per NEWS_VERSION) — all on Dialog
+│       └── old/               #   LEGACY: the hand-built modals, wired to nothing
 │
 ├── equip/                     # stage 4 — clicking a combo
 │   ├── instant_loader.js      #   decides WHAT to apply

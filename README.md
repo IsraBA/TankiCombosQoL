@@ -39,8 +39,8 @@ directly into the game's own interface:
 - **Battle chat translation** — read foreign chat in your own language, in place
   on the game screen.
 - **Battle HUD editor** — drag, resize and fade the radar, the kill feed, the
-  supplies and the rest, and keep a separate arrangement for each of the game's
-  two HUD layouts.
+  supplies, the chat and the rest, and keep a separate arrangement for each of
+  the game's two HUD layouts.
 
 All of it is built to look and feel native: the UI mirrors the game's own
 colors, fonts, and hover states rather than announcing itself as a third-party
@@ -119,11 +119,19 @@ each piece where you want it.
 - **Open it from the game's own Settings** → Controls → **HUD EDITOR**. The
   editor replaces the settings screen with a placeholder version of the battle
   screen, the way the mobile client's control editor works.
-- **Drag to move, two sliders to resize (50-200%) and fade (0-100%)** — the
+- **Drag to move, two sliders to resize (50-300%) and fade (0-100%)** — the
   radar, the battle score and timer, the kill feed, the supplies, the grenade
-  and nuclear slots, the overdrive, and the health and energy bars.
+  and nuclear slots, the overdrive, the health and energy bars, the active
+  effects, the chat (its text fades too), your name/rank/XP, the top-right
+  buttons and the FPS counter.
+- **Drawn with the game's own artwork**, at your real resolution and UI scale,
+  so what you place is where it lands in battle.
+- **Snaps to the screen's centre lines** while you drag.
 - **Elements cannot be dropped on top of each other** — the shape turns red and
   the move is dropped.
+- **In the centred layout the bars ride your tank**, so they can be resized and
+  faded but not dragged — and the active effects move out of their way as they
+  grow.
 - **One arrangement per layout.** The game's centred layout and its default
   layout keep separate settings, and switching between them in the game's own
   settings switches which one you are editing.
@@ -159,8 +167,8 @@ each piece where you want it.
 
 **[➜ Install from the Chrome Web Store](https://chromewebstore.google.com/detail/tanki-online-combo-manage/aodkeckgccekmgmeddikfjgfnomalacm)**
 
-> **Updating from an older version?** v4.0 asks for **no new permissions**, so
-> nothing needs re-approving. (If you are coming from before v3.0, that release
+> **Updating from an older version?** v5.0 asks for **no new permissions** (nor
+> did v4.0 or v4.1), so nothing needs re-approving. (If you are coming from before v3.0, that release
 > added chat translation and did need permission for the translation service —
 > Chrome disables an extension until such a permission is approved. Click the
 > extensions (puzzle 🧩) icon in your toolbar and accept it; it happens once.)
@@ -216,8 +224,8 @@ as it develops.
 Open the game's **Settings** → **Controls** and click **HUD EDITOR**. Drag any
 piece to move it, or click it and use the two sliders to change its size and
 transparency. Elements refuse to sit on top of each other — the outline turns
-red and the move is dropped. The arrow at the top left takes you back, and
-everything is saved as you go.
+red and the move is dropped. The arrow at the top left (or `Z` / `Esc`) takes
+you back, and everything is saved as you go.
 
 Each of the game's two HUD layouts keeps its own arrangement, so switching
 between them in the game's settings switches which one you are editing. The
@@ -239,7 +247,7 @@ original text and the translation.
 | `C` | Open the combo manager | Lobby / garage |
 | `Alt+T` | Toggle original ↔ translated chat | In battle |
 | `Ctrl+Z` | Undo the last change | HUD editor |
-| `Esc` | Leave the editor | HUD editor |
+| `Z` / `Esc` | Leave the editor | HUD editor |
 
 ### Tips
 
@@ -257,7 +265,7 @@ sent anywhere is the text of a chat message you asked to have translated.**
 | Permission | Why it's needed |
 | --- | --- |
 | `storage` | saves your combos, HUD arrangement and settings locally |
-| `*://*.tankionline.com/*` | the game page — read equipped items, inject the UI, locate the chat UI |
+| `*://*.tankionline.com/*` | the game page — read equipped items, inject the UI, apply your HUD arrangement, read the game's script to find the parts it works with |
 | `translate.googleapis.com` | send message text to be translated |
 
 - Combos, names, order and settings are stored with the browser's extension
@@ -265,6 +273,8 @@ sent anywhere is the text of a chat message you asked to have translated.**
 - The protection recommendations are computed **entirely in your browser** from
   data the game has already sent to it. Nothing about the battle, the players in
   it or your equipment is sent anywhere.
+- The HUD arrangement only changes how the game is drawn on **your** screen, and
+  is stored with your other settings.
 - When translation is enabled, the **text of a chat message** is sent to Google
   Translate to get the translation back. Only the text
   and your target language are sent — no username, no sender identity, no other
@@ -289,6 +299,8 @@ feature is self-contained under `features/`; only UI components are shared.
 ┌────────────────────── ISOLATED world ──────────────────────┐
 │  features/combos/     the UI, and what to apply             │
 │  features/advisor/    the recommendation model + its panel   │
+│  features/hud/        the editor screen, the HTML elements,  │
+│                       the HUD's geometry read from the bundle│
 │  features/translator/isolated/    chrome.* access:           │
 │    bridge.js   settings sync + translate relay               │
 │    detect.js   parses the game bundle for the chat HUD       │
@@ -299,6 +311,7 @@ feature is self-contained under `features/`; only UI components are shared.
 │  combos  capture the garage state, dispatch the game's own    │
 │          Redux actions to equip                               │
 │  advisor capture the battle state, rank the enemy turrets     │
+│  hud     one render hook: move, resize and fade each element  │
 │  translator/main/  captures the chat HUD, rewrites messages   │
 └──────────────────────────┬──────────────────────────────────┘
                            │ chrome.runtime.sendMessage
@@ -316,8 +329,8 @@ MAIN-world only. And in MV3 a content-script `fetch` is bound by the page's CORS
 policy, so the translation request has to happen in the service worker. One rule
 keeps it straight: **anything under a `game/` folder runs in MAIN.**
 
-`shared/` holds the native-styled `switch`, `select` and `drawer` components plus
-`icons.js`. Because JS worlds don't share a `window`, the component files are
+`shared/` holds the native-styled `switch`, `select`, `drawer`, `button`,
+`slider` and `dialog` components plus `icons.js`. Because JS worlds don't share a `window`, the component files are
 listed in both worlds' content-script blocks; each world gets its own copy on
 `window.TankiQoL`.
 
@@ -327,7 +340,7 @@ listed in both worlds' content-script blocks; each world gets its own copy on
 
 ```
 .
-├── manifest.json              # 9 content-script blocks (CSS / translator ×2 / combos ×3 / advisor ×2 / hud)
+├── manifest.json              # 10 content-script blocks (CSS / translator ×2 / combos ×3 / advisor ×2 / hud ×2)
 ├── background.js              # service worker — translation fetch
 ├── shared/
 │   ├── icons.js               # SVG paths more than one feature draws
@@ -351,8 +364,11 @@ listed in both worlds' content-script blocks; each world gets its own copy on
 │   │   ├── model/             # pure: ranking + your modules -> a recommendation
 │   │   └── view/              # the block injected into the Protection tab
 │   ├── hud/                   # the battle HUD editor
+│   │   ├── discovery/         # this build's names and geometry, read from the bundle
 │   │   ├── capture/game/      # [MAIN] hold the live HUD, measure what the game drew
 │   │   ├── apply/game/        # [MAIN] one render hook: move, resize, fade
+│   │   ├── dom/               # the HUD elements the game draws in HTML
+│   │   ├── bridge/            # its own pipe between the worlds
 │   │   ├── model/             # pure: the element catalogue and the geometry
 │   │   └── editor/            # the editor screen opened from the game's Settings
 │   └── translator/
@@ -393,7 +409,8 @@ build step — edit a file, hit the reload icon on the extension card in
 
 **Debugging.** The extension prints nothing at runtime; state is pulled on demand
 instead. In the game page's console, `__CMB.read()`, `__CMB.state()` and
-`__CMB.debug` expose the garage hook, `__ADV.raw()` the captured battle, and
+`__CMB.debug` expose the garage hook, `__ADV.raw()` the captured battle,
+`__HUD.state()` / `__HUD.nodes()` / `__HUD.debug` the HUD editor, and
 `__CT_STATE()` / `__CT_DEBUG` / `__CT_MSGS` the translator. Full debugging and
 recovery notes — including what to do when a Tanki update breaks chat detection —
 are in [CLAUDE.mds/debugging.md](CLAUDE.mds/debugging.md).
@@ -405,7 +422,7 @@ ship and refuses to build if internal docs slip in; see
 **Testing.** `build/harnesses/` holds plain `node <file>.js` scripts — no
 dependencies, no framework — that run the *shipped* code offline against real
 game bundles: discovery, the read and write paths, the migrator, the randomiser's
-filters, the recommendation model. Run them all after any change. What they
+filters, the recommendation model, and every layer of the HUD editor. Run them all after any change. What they
 cannot cover is anything that needs a live account or a real battle, so also walk
 the checklist in [CLAUDE.mds/store.md](CLAUDE.mds/store.md) → "Testing", with at
 least one non-English game locale if you touched UI or selectors.
@@ -418,6 +435,7 @@ least one non-English game locale if you touched UI or selectors.
 | Items not equipping | name cleaning in `utils.js`, or ownership detection |
 | Clicks not registering | timing — adjust the waits in the equippers/navigators |
 | Chat not translating | bundle detection broke after a game update — see CLAUDE.mds/translator.md → "When a Tanki build breaks the translator" |
+| HUD arrangement not applied in battle | the HUD discovery missed a game update — run `build/harnesses/test_hud_builds.js` on the new bundle; see CLAUDE.mds/debugging.md |
 
 ---
 

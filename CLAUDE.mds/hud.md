@@ -210,8 +210,8 @@ right.
 `groups.js` reproduces the split **by screen side**, not by category: the
 category lives on the map key rather than the node, and the side is what the
 user actually sees. (The editor's slot list does come from the categories —
-see "Which slots, and in what order" below.) The nuclear recharge ring (`uot`) is a separate top-level
-node that sits over the nuclear slot, and is assigned by the same side test, so
+see "Which slots, and in what order" below.) The nuclear recharge ring
+(`uot`) is a separate top-level node that sits over the nuclear slot, and is assigned by the same side test, so
 it always travels with the group it visually belongs to.
 
 ## The element catalogue
@@ -241,16 +241,16 @@ The crystals (`uOn`) and the weapon aim arc are deliberately out of scope.
 
 **Pushing.** In the centered layout the effects are two rows around the tank
 point — one 54 above it and one 8 below; the supply effects show in the one
-  below (`aNt` picks the map by the effect's `bis_1`) — and neither can
-be dragged. They do scale on their own, and a row must never land on the bars:
+below (`aNt` picks the map by the effect's `bis_1`) — and neither can be
+dragged. They do scale on their own, and a row must never land on the bars:
 `pushedBy: {centered: "bars"}` in the catalogue makes every part above the tank
 point hang off the bars' top edge and every part below it off their bottom edge.
 The edge moves with the bars' scale; the gap and the icons move with the
 effects' own. One formula, twice: `HudPush.stacked` (`model/push.js`) in the
 editor, which also repaints the rows live while the bars' slider moves, and
 `I.pushed` (`apply/game/push.js`) in MAIN, which reads the bars' live box every
-frame. Overlap is not
-checked between a pusher and what it pushes — the push is what prevents it.
+frame. Overlap is not checked between a pusher and what it pushes — the push is
+what prevents it.
 
 **Snapping.** A drag whose centre comes within 8 stage pixels of the screen's
 vertical or horizontal centre line lands exactly on it, with a guide line shown
@@ -348,13 +348,15 @@ the screen**, not pixels. The same file therefore works at any resolution, and
 the editor (which runs at the browser's CSS pixel size) and the battle (which
 runs at the game's own screen units) agree without converting anything.
 
-The editor is opened **outside battle**, where no HUD exists to ask. So
-`capture/game/measure.js` records, during battle, what the game gave each
-element: its logical box, its anchors, the kind of scaling strategy, and the
-screen and UI scale it was measured on, and **`model/seed.js` ships one such
-record per layout** so the editor is right on its very first open, before the
-player has entered a battle with the extension installed. A real measurement
-from the player's own battle overrides the seed, per element.
+The editor is opened **outside battle**, where no HUD exists to ask. Almost all
+of the geometry is therefore read out of the game's code (next section). What
+the code cannot give — the kill log, whose area comes from the HTML HUD — is
+measured instead: `capture/game/measure.js` records, during battle, what the
+game gave each element (its logical box, its anchors, the kind of scaling
+strategy, and the screen and UI scale it was measured on), and
+**`model/seed.js` ships one such record per layout** so the editor is right on
+its very first open. A real measurement from the player's own battle overrides
+the seed, per element; a discovered recipe overrides both.
 
 > **Refreshing the seed**: in a battle, `__HUD.seed()` prints the current
 > measurement as a line ready to paste into `model/seed.js`. Do it once per
@@ -675,9 +677,9 @@ default is deleted rather than stored.
 | `i2m` | `hudSettings` | `{layouts}` | the preferences; sent on load and on every change |
 | `i2m` | `hudGame` | `{names, offsets}` | this build's names and add-site table, from `discovery/detect.js`; sent again on `ready` |
 | `i2m` | `hudStateRequest` | — | ask for the current state |
-| `i2m` | `hudPivots` | the pivot of every element that has a recipe, per layout, in screen fractions |
-| `hudMeasureRequest` | `{id}` | measure now (the editor opened during a battle) |
-| `m2i` | `ready` | — | MAIN's listeners are up; ISOLATED re-sends the settings |
+| `i2m` | `hudPivots` | `{pivots}` | the pivot of every element that has a recipe, per layout, in screen fractions |
+| `i2m` | `hudMeasureRequest` | `{id}` | measure now (the editor opened during a battle) |
+| `m2i` | `ready` | — | MAIN's listeners are up; ISOLATED re-sends the game names, the pivots and the settings |
 | `m2i` | `hudState` | `{layout, showButtonLabels, uiSize, scale, inBattle, rootFontPx, dpr}` | pushed on change, polled once a second |
 | `m2i` | `hudMeasure` | a measurement record | pushed after a battle lays the HUD out |
 | `m2i` | `hudMeasureResult` | `{id, ok, record}` | reply |

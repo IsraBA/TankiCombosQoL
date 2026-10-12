@@ -81,22 +81,31 @@ The zip lands in `build/dist/tanki-combos-qol-v<version>.zip`.
    lobby COMBOS button carries a yellow badge and the modal opens on the first
    entry to the tab. Closing it any way (X, button, backdrop, Escape) clears
    both, permanently. `TankiQoL.WhatsNewModal.reset()` replays it.
-8. **HUD editor** — needs one battle first, since the geometry is learned there:
-   - enter a battle and leave it, then Settings → Controls → HUD EDITOR: every
-     element is drawn where it actually was, at the right size;
-   - drag one, resize it, fade it → re-enter a battle and confirm it matches;
-   - drag one onto another → red outline, the move is dropped;
+8. **HUD editor** — the geometry comes from the game's code, so no battle is
+   needed first:
+   - on a fresh profile, Settings → Controls → HUD EDITOR: every element is
+     drawn where the game puts it, at the right size, including the HTML ones
+     (name/rank/XP, the top-right buttons, FPS) and the chat;
+   - in the console, `__HUD.debug.names === "bundle"`, and in battle
+     `__HUD.nodes()` gives every element a `role` (not `null`);
+   - drag one, resize it, fade it → enter a battle and confirm it matches,
+     the chat's text fading too;
+   - drag one onto another → red outline, the move is dropped; drag near the
+     screen's centre lines → it snaps, with a guide line;
    - grow one that sits against a screen edge → it slides inside rather than
      refusing;
    - in the centred layout the health/energy bars can be resized and faded but
-     not dragged;
+     not dragged, and growing them pushes the active-effect rows clear of them;
    - change the layout in the game's own settings → the editor switches to that
      layout's arrangement, and the other one is untouched;
-   - undo, and reset (which must clear only the layout being edited);
+   - undo (and Ctrl+Z), and reset (which must clear only the layout being
+     edited); Z, Escape and the back arrow all leave;
    - change the game's own **battle UI scale** and confirm the editor and the
      battle still agree;
    - resize the browser window / go fullscreen and confirm the arrangement
-     follows.
+     follows;
+   - with **Tanki Tweaks** installed, open the editor, then a battle: its Tab
+     table must still be styled (not half-transparent).
 9. **Translator**: enter a battle; foreign chat should show original → spinner →
    `[SRC] » translation`. Check the toggle button next to the chat alert button
    and Alt+T. Open the game's Settings screen and confirm the injected toggle +

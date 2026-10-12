@@ -4,7 +4,7 @@ Internal cheat sheet for the Developer Dashboard. Everything here is meant to be
 copied into a dashboard field. **This file never ships** — see `PACKAGING.md`.
 
 The extension is already published with 500+ users, so every upload is an
-*update*, not a new listing. Two updates have shaped this file:
+*update*, not a new listing. These updates have shaped this file:
 
 - **v3.0** added chat translation, which changed the name, the permissions and —
   for the first time — the fact that user data is transferred to a third party.
@@ -13,17 +13,21 @@ The extension is already published with 500+ users, so every upload is an
   game's own model, and adds paint and skins as combo slots. It adds **no
   permissions and no data transfer**, so only the listing text below needed
   changing — the Privacy tab was unaffected.
-- **v4.1** (current) is a **bugfix-only** upload: Google stopped serving the
+- **v4.1** was a **bugfix-only** upload: Google stopped serving the
   translation endpoint the extension called (HTTP 429), so chat translation had
   degraded to "works rarely". Backend repaired inside the existing host; the two
-  dead Lingva hosts were dropped from `host_permissions`. **Nothing to change in
-  the dashboard** — no new permission, no new third party, no listing-text or
-  Privacy-tab edit. Just upload the ZIP. The only field worth touching is
-  "What's new" (below), and even that is optional.
+  dead Lingva hosts were dropped from `host_permissions`. Nothing changed in the
+  dashboard.
+- **v5.0** (current) adds the **battle HUD editor**. **No new permission and no
+  new data transfer** — the arrangement is stored locally and applied on the
+  player's own screen. What changes in the dashboard: the description (a HUD
+  EDITOR section), "What's new", and three Privacy-tab texts that list what the
+  extension does (single purpose, storage, host permission). The data-use
+  disclosure is unchanged.
 
 ## 1. Read this first: what changes for existing users
 
-**v4.0 grants no new permission.** `permissions` is unchanged and
+**v4.0, v4.1 and v5.0 grant no new permission.** `permissions` is unchanged and
 `host_permissions` only ever *shrank* — the two dead Lingva hosts were dropped
 when the translation backend was repaired (Sep 2026); `translate.googleapis.com`
 is the sole remaining translation host. Dropping a host is not a privilege
@@ -53,33 +57,35 @@ plus an opt-in popup — was considered and rejected as too much complexity). Th
 listing text below does not scope it to pre-3.0 users — see the note under the
 description.
 
-In-extension, v4.0 announces itself: opening the COMBOS tab after the update
-shows a one-time note of what changed, and the lobby button carries a badge until
-it is seen. So the "What's new" field is a summary, not the only place users will
-learn about the new feature.
+In-extension, v4.0 announced itself: opening the COMBOS tab after the update
+showed a one-time note of what changed, and the lobby button carried a badge
+until it was seen. **v5.0 does not** — `NEWS_VERSION` in
+`view/panels/whats_new_modal.js` is still `4.0`, so users who saw the v4.0 note
+see nothing new. If the HUD editor should be announced in game, that is a new
+`NEWS_VERSION` plus a new `LINES` entry in all 11 languages.
 
 ## 2. The "Store listing" tab
 
 **Name** and **Summary** are taken from `manifest.json` (`name` / `description`)
 and update themselves when the new package is uploaded — nothing to type. The
 summary is 131 of the allowed 132 characters, so if you ever edit the manifest
-description, re-check that it still fits.
+description, re-check that it still fits. It still names only combos and chat
+translation — neither the advisor (v4.0) nor the HUD editor (v5.0) is in it.
 
 **Category:** Games. **Language:** English.
 
 ### Detailed description
 
-This is the developer's final v4.0 wording (1,052 of 16,000 chars). Replace the
-whole field with it — the live description predates v4.0 and lists combos-only
-slots with nothing about protection recommendations.
+The developer's v4.0 wording, plus a HUD EDITOR section for v5.0 (a draft in
+the same register — review it before pasting). Replace the whole field with it.
 
 Keep it short. Nobody reads a wall of marketing copy on a store page, and the
 screenshots carry the detail anyway.
 
 > **Known mismatch in the last paragraph.** It says Chrome disables the
 > extension until a new permission is approved. That is the v3.0 situation:
-> **v4.0 adds no permissions**, so nobody is disabled and no puzzle-icon badge
-> appears. Kept at the developer's choice — it is harmless for the pre-3.0
+> **v4.0 and every release since add no permissions**, so nobody is disabled
+> and no puzzle-icon badge appears. Kept at the developer's choice — it is harmless for the pre-3.0
 > users who do still hit it, and it is a standing service notice for whichever
 > future release does add one. If a v4.0 user reports "it told me to approve
 > something and there was nothing to approve", this is why.
@@ -91,10 +97,13 @@ Save a full garage setup - turret, hull, both augments, drone, grenade, protecti
 PROTECTION RECOMMENDATIONS
 Recommends which protections to take mid-battle, based on the battle data and the strongest players on the enemy team.
 
+HUD EDITOR
+Move, resize and fade every part of the battle screen - radar, kill feed, supplies, bars, chat, and the rest. Open it from the game's Settings - Controls. The default and centered layouts each keep their own arrangement.
+
 CHAT TRANSLATION
 Foreign battle chat, translated in place on the game screen. Pick your language in the game's Settings. Alt+T switches back to the original, and you can turn translation off entirely - combos keep working.
 
-Free, no ads, no account, no automation and no gameplay advantage. Your combos stay in your browser; the only thing that ever leaves it is the text of a message being translated.
+Free, no ads, no account, no automation and no gameplay advantage. Your combos and HUD layout stay in your browser; the only thing that ever leaves it is the text of a message being translated.
 
 Updating from an older version? Chrome disables the extension until you approve the new permission - click the puzzle icon in your toolbar and accept. Once, and you're done.
 
@@ -129,7 +138,13 @@ come back:
   covers an extension that reads and redraws battle chat and reads the battle
   roster.
 
-### "What's new" field for v4.1  (current upload)
+### "What's new" field for v5.0  (current upload — draft, review before pasting)
+
+```
+New: a HUD editor. Move, resize and fade every element of the battle screen - radar, kill feed, supplies, health bars, chat and more - from the game's own Settings - Controls - HUD EDITOR. The default and centered layouts each keep their own arrangement, everything saves as you go, and only your screen changes. No new permissions.
+```
+
+### "What's new" field for v4.1  (already published — kept for reference)
 
 ```
 Fixes chat translation, which had stopped working for most messages because the translation service stopped answering the request the extension was making. Translation now goes through a different Google Translate endpoint, with a second one as a fallback. Also fixes the language tag shown on Hebrew and Chinese messages. No new permissions.
@@ -143,16 +158,18 @@ Combos now equip through the game's own equipment actions - instant, no flicker,
 
 ### Screenshots (up to 5, 1280×800 or 640×400)
 
-Neither the translator nor the advisor has a screenshot yet, and the advisor is
-the headline feature of this release. Worth capturing:
+Neither the translator, the advisor nor the HUD editor has a screenshot yet, and
+the HUD editor is the headline feature of v5.0. Worth capturing (five is the
+limit, so the lobby button gave up its place):
 
 1. The COMBOS tab in the garage with several saved combo cards (one marked as
    currently worn).
-2. The Protection tab mid-battle showing the ranking row and the recommended set
+2. The HUD editor with one element selected and the size/opacity sliders shown —
+   ideally beside a battle screenshot with that arrangement applied.
+3. The Protection tab mid-battle showing the ranking row and the recommended set
    with EQUIP ALL.
-3. A foreign chat message translated, showing the `[RU] »` prefix.
-4. The in-game settings panel (translation toggle + language dropdown with flags).
-5. The lobby quick-access button.
+4. A foreign chat message translated, showing the `[RU] »` prefix.
+5. The in-game settings panel (translation toggle + language dropdown with flags).
 
 ### Additional fields (currently empty — worth filling)
 
@@ -168,33 +185,31 @@ and only affect featuring.
 
 ## 3. The "Privacy" tab, field by field
 
-**Unchanged by v4.0 except the two texts below**, which now also describe the
-advisor. The dashboard's Privacy tab has **one** justification box for host
-permissions — not one per host — so its text covers all four hosts together. Each
-block is sized to fit its 1,000-character limit.
+**v5.0 changes the three texts below**, which list what the extension does and
+now include the HUD editor (drafts — review before pasting). The dashboard's
+Privacy tab has **one** justification box for host permissions — not one per
+host — so its text covers both hosts together. Each block is sized to fit its
+1,000-character limit.
 
-### "Single purpose description"  (719 chars)
-
-```
-The single purpose of this extension is to improve the player's quality of life in Tanki Online, inside the game's own interface. It lets players save, manage and instantly switch between full garage equipment setups ("combos" of turrets, hulls, augments, drones, grenades, protections, paint and skins); it recommends which protection modules are worth equipping against the enemy team in the battle the player is currently in, computed in the browser from data the game has already loaded; and it translates the in-game battle chat into a language the player chooses, displayed in place on the game screen. All three reduce friction for the player inside a single game, and none of them operates on any other website.
-```
-
-### "storage justification"  (455 chars)
+### "Single purpose description"  (804 chars)
 
 ```
-The storage permission is used to save the user's own data: their saved garage combos (names, order, contents) and their preferences, including the chat translation on/off toggles and the chosen target language. Combos are stored locally in the browser; the few small preferences use Chrome's sync storage so they follow the user's own browser profile. No personal or sensitive data is collected, and none of this data is sent to us or to any third party.
+The single purpose of this extension is to improve the player's quality of life in Tanki Online, inside the game's own interface. It lets players save, manage and instantly switch between full garage equipment setups ("combos" of turrets, hulls, augments, drones, grenades, protections, paint and skins); it recommends which protection modules are worth equipping against the enemy team in the battle the player is in, computed in the browser from data the game has already loaded; it lets players move, resize and fade the elements of the battle HUD, on their own screen only; and it translates the in-game battle chat into a language the player chooses, displayed in place on the game screen. All four reduce friction for the player inside a single game, and none of them operates on any other website.
 ```
 
-### "Host permission justification"  (989 chars)
+### "storage justification"  (564 chars)
 
 ```
-tankionline.com: the extension runs only on the Tanki Online game page. It needs page access to read which items are currently equipped, to inject its own UI into the garage, lobby, protection and settings screens, to read the state of the battle the player is in so it can recommend which protection modules to wear, and to read the game's own already-loaded script in order to locate the chat UI, which is minified and changes with every game update. Everything read from the page, from the game's own state and from that script is used and discarded in the browser; none of it is transmitted.
+The storage permission is used to save the user's own data: their saved garage combos (names, order, contents), their battle HUD arrangement (the position, size and transparency of each element), and their preferences, including the chat translation on/off toggles and the chosen target language. Combos and the HUD arrangement are stored locally in the browser; the few small preferences use Chrome's sync storage so they follow the user's own browser profile. No personal or sensitive data is collected, and none of this data is sent to us or to any third party.
+```
+
+### "Host permission justification"  (854 chars)
+
+```
+tankionline.com: the extension runs only on the Tanki Online game page. It needs page access to read which items are currently equipped, to inject its own UI into the garage, lobby, protection and settings screens, to read the state of the battle the player is in so it can recommend protection modules, to apply the player's HUD arrangement, and to read the game's own already-loaded script to locate the parts it works with, which are minified and change with every game update. Everything read is used and discarded in the browser; none of it is transmitted.
 
 translate.googleapis.com: to translate a battle-chat message, the text of that message is sent to Google Translate and the result is displayed in place on the game screen. Only the message text and the user's chosen target language are sent. The extension does not access any other websites.
 ```
-
-> The char count above predates the Sep 2026 trim of this paragraph; it is now
-> shorter, and still well inside the limit.
 
 ### "Are you using remote code?"
 
@@ -209,6 +224,8 @@ return data (JSON), not code. Leave the justification box empty.
 equipment and scores, which sounds like it should — but it is read from state the
 game already sent to this browser, used to render a panel, and never transmitted,
 so it is not *collected* data in the dashboard's sense. Nothing new to tick.
+**v5.0 changes nothing here either**: the HUD arrangement is the user's own
+preference, kept in local storage and never sent anywhere.
 
 The declaration, as set at v3.0 and still correct:
 

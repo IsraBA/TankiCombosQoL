@@ -198,7 +198,7 @@ The game's own mount thunk gates on it:
   is applied as a set, so refusing all of it is the right call anyway; if that
   ever needs revisiting, resolve the alias first.
 - `delayMountTimeMs` is in the Garage `toString`, so discovery picks it up with
-  every other field. `verify_shipped.js` asserts it on all 8 bundles — it has
+  every other field. `verify_shipped.js` asserts it on every bundle — it has
   been in the game for years, and losing it silently would bring the bug back.
 - The value is a Kotlin **Long**, so read it through `toString`, never as a
   number.
@@ -292,7 +292,7 @@ inferring it from code shape. Anchors:
   as much as the fields: the reducer branches on `instanceof`.
 - **the garage proxy and the mount/select actions** (`discovery/send.js`) anchor
   on the `mountItem` command hash — derived from the command name, so
-  build-stable, and verified to appear exactly once in all 8 bundles.
+  build-stable, and `verify_shipped.js` resolves it on every bundle.
 
 Everything after the core four is **optional**: if one anchor breaks, discovery
 still succeeds and only that column goes blank, rather than the whole feature
@@ -309,10 +309,12 @@ also flushes a wrong cache). Stale-prefix keys
 are cleaned up on startup. `discovery/game/names.js` seeds the latest-known build so
 the hook works during the discovery fetch; discovery overrides it.
 
-**Verified on all 9 bundles in `../../../research/`:**
+**Verified on all 11 bundles in `../../../research/`:**
 
 | build | trap field | mountedItems | mounted | mountIndex |
 |---|---|---|---|---|
+| 8f7f4827 | `aq1_1` | `ypz_1` | `yr3_1` | `zr3_1` |
+| 7f05e212 | `aq1_1` | `ypz_1` | `yr3_1` | `zr3_1` |
 | f1de53fa (seed) | `aq1_1` | `ypz_1` | `yr3_1` | `zr3_1` |
 | 1327298e | `vq0_1` | `vpz_1` | `tr3_1` | `ur3_1` |
 | 009aa16b | `oq0_1` | `opz_1` | `lr3_1` | `mr3_1` |

@@ -67,8 +67,8 @@ says exactly which one that is. Do not load them all.
 
 ## Quick facts
 
-- **Three execution contexts**: ISOLATED world (most of combos + the translator's
-  bridge/detect, has `chrome.*`), MAIN world (the game hooks, shares the page
+- **Three execution contexts**: ISOLATED world (the UI, storage and every
+  bundle discovery, has `chrome.*`), MAIN world (the game hooks, shares the page
   `window`), and the service worker (`background.js`, the only place allowed to
   read cross-origin responses).
 - **Combos folders follow the flow**, not the file type: `discovery/`, `bridge/`,
@@ -80,7 +80,7 @@ says exactly which one that is. Do not load them all.
   MAIN), `window.__ADV` (battle probe, MAIN), `window.__HUD` (HUD editor, MAIN).
 - **CSS prefix**: every class the extension creates starts with `cme_`.
 - **Storage**: one key per feature. `savedCombos` and friends in `local`,
-  `translator` in `sync`.
+  `hudLayout` in `local`, `translator` in `sync`.
 - **Testing** is the offline harnesses in `build/harnesses/` (`node <file>.js`,
   see rule 9) plus a manual pass in the game — the checklist is in
   `CLAUDE.mds/store.md`. Anything needing a real account or a live battle is
@@ -90,7 +90,7 @@ says exactly which one that is. Do not load them all.
 
 ```
 .
-├── manifest.json          # 9 content-script blocks — see architecture.md
+├── manifest.json          # 10 content-script blocks — see architecture.md
 ├── background.js          # service worker: the cross-origin translation fetch
 ├── CLAUDE.md              # this file
 ├── CLAUDE.mds/            # the detailed docs (start at README.md)
@@ -100,7 +100,7 @@ says exactly which one that is. Do not load them all.
 ├── shared/                # icons.js + components (drawer/switch/select/button/slider/dialog)
 ├── features/combos/       # the combos feature — one folder per flow stage
 ├── features/advisor/      # recommended protections — recon / model / view
-├── features/hud/          # the battle HUD editor — capture / apply / editor
+├── features/hud/          # the battle HUD editor — discovery / capture / apply / dom / editor
 ├── features/translator/   # the translator feature
 ├── assets/                # icons
 └── HTML-examples/         # real game HTML & CSS samples (reference, never shipped)
