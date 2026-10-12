@@ -1,0 +1,118 @@
+/* features/hud/dom/replica_user.css */
+
+/* פרטי המשתמש בעותק הנסתר: כללי הלובי, על השמות עם cme_ */
+
+/* השורש של Uti: שורה בגובה 6em (ksc-17 במשחק) */
+.cme_hud-dom .cme_hud-userinfo {
+  display: flex;
+  align-items: center;
+  height: 6em;
+}
+
+/* פס ה-XP: ksc-18 ו-::after שלו, בשם משלנו */
+.cme_hud-dom .cme_hud-xpbar {
+  background-color: rgba(118, 255, 51, 0.5);
+  border-radius: 0.375em;
+  position: relative;
+  min-width: 12.5em;
+  width: auto;
+  height: 0.25em;
+  margin-top: 0.375em;
+  margin-left: 0px;
+}
+
+.cme_hud-dom .cme_hud-xpbar-fill {
+  display: flex;
+  background-color: rgb(118, 255, 51);
+  border-radius: 6.25em;
+  height: 100%;
+}
+
+/* "/ המקסימום" אחרי הערך (ksc-19) */
+.cme_hud-dom .cme_hud-xpmax {
+  opacity: 0.6;
+  color: rgb(118, 255, 51);
+}
+
+/* העוטף בקרב */
+
+.cme_hud-dom .cme_UserInfoContainerStyle-blockLeftPanel {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  margin-left: 0px;
+  margin-top: 0px;
+  position: relative;
+  width: auto;
+  z-index: 2;
+}
+
+/* ---- UserInfoContainerStyle ---- */
+
+.cme_hud-dom .cme_UserInfoContainerStyle-rankIconContainer {
+  width: 5.9375em;
+  height: 6em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.cme_hud-dom .cme_UserInfoContainerStyle-containerRightBorder {
+  border-right: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.cme_hud-dom .cme_UserInfoContainerStyle-titleRankIcon {
+  width: 4.375em;
+  height: 4.375em;
+  margin: 0px 0.813em;
+}
+
+.cme_hud-dom .cme_UserInfoContainerStyle-containerProgressMainScreen {
+  display: flex;
+  flex-direction: column;
+  min-width: 10em;
+  width: auto;
+  margin-left: 1em;
+  height: 3.75em;
+}
+
+.cme_hud-dom .cme_UserInfoContainerStyle-userNameRank {
+  font-weight: 500;
+}
+
+.cme_hud-dom .cme_UserInfoContainerStyle-textDecoration {
+  text-shadow: rgba(0, 0, 0, 0.5) 0em 0em 0.25em;
+}
+
+.cme_hud-dom .cme_UserInfoContainerStyle-containerParameterProgress {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  height: 0.875em;
+  margin-top: 0.55em;
+  opacity: 0.8;
+  white-space: nowrap;
+}
+
+/* התמונה (experience.svg) מהגילוי, ב-style של הצומת */
+.cme_hud-dom .cme_UserInfoContainerStyle-xpIcon {
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center center;
+  width: 1em;
+  height: 1em;
+  margin-top: 0.0625em;
+}
+
+.cme_hud-dom .cme_UserInfoContainerStyle-progressValue {
+  text-shadow: rgba(0, 0, 0, 0.5) 0em 0em 0.25em;
+  font-family: BaseFontMedium, FallbackFontMedium;
+  font-style: normal;
+  font-weight: 500;
+  text-transform: uppercase;
+  font-size: 1em;
+  text-align: justify;
+  margin-left: 0.25em;
+  color: rgb(118, 255, 51);
+}

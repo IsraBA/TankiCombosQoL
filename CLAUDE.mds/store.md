@@ -81,13 +81,29 @@ The zip lands in `build/dist/tanki-combos-qol-v<version>.zip`.
    lobby COMBOS button carries a yellow badge and the modal opens on the first
    entry to the tab. Closing it any way (X, button, backdrop, Escape) clears
    both, permanently. `TankiQoL.WhatsNewModal.reset()` replays it.
-8. **Translator**: enter a battle; foreign chat should show original → spinner →
+8. **HUD editor** — needs one battle first, since the geometry is learned there:
+   - enter a battle and leave it, then Settings → Controls → HUD EDITOR: every
+     element is drawn where it actually was, at the right size;
+   - drag one, resize it, fade it → re-enter a battle and confirm it matches;
+   - drag one onto another → red outline, the move is dropped;
+   - grow one that sits against a screen edge → it slides inside rather than
+     refusing;
+   - in the centred layout the health/energy bars can be resized and faded but
+     not dragged;
+   - change the layout in the game's own settings → the editor switches to that
+     layout's arrangement, and the other one is untouched;
+   - undo, and reset (which must clear only the layout being edited);
+   - change the game's own **battle UI scale** and confirm the editor and the
+     battle still agree;
+   - resize the browser window / go fullscreen and confirm the arrangement
+     follows.
+9. **Translator**: enter a battle; foreign chat should show original → spinner →
    `[SRC] » translation`. Check the toggle button next to the chat alert button
    and Alt+T. Open the game's Settings screen and confirm the injected toggle +
    language dropdown are there and styled natively. Resize / toggle fullscreen
    and confirm no duplicate chat lines.
-9. After code changes: click the refresh icon on the extension card, then reload
-   the game tab.
+10. After code changes: click the refresh icon on the extension card, then reload
+    the game tab.
 
 Before any release, also run the offline harnesses (`debugging.md`) — they cover
 the discovery and write logic that manual testing can only sample.

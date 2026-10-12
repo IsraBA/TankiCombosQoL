@@ -132,7 +132,7 @@ tools over scripted rewrites whenever the change is small enough.
 
 ## Finishing a round of edits
 
-Three steps, every time — **not only before a release** (rule 8 in
+Three steps, every time — **not only before a release** (rule 9 in
 `../CLAUDE.md`). A one-line change counts as a round.
 
 1. **Update the harnesses in `build/harnesses/`.** They are part of the code, not

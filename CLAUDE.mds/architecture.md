@@ -35,9 +35,10 @@ Content scripts can't use ES modules, so modules share namespace objects on
 | `window.__CT` | MAIN | translator internals: `.settings`, `.translate`, `.skip`, `.bidi`, `.rebuild()` |
 | `window.__CMB` | MAIN | garage hook: `.read()`, `.index()`, `.names()`, `.state()`, `.debug`, and `.internals` (shared by every `game/` file) |
 | `window.__ADV` | MAIN | advisor battle probe: `.debug`, `.raw()`, and `.internals` (shared by its `game/` files) |
+| `window.__HUD` | MAIN | HUD editor: `.debug`, `.state()`, `.nodes()`, `.groups()`, `.measure()`, `.overrides()`, and `.internals` |
 | `__CT_*` | MAIN | translator console helpers — see `debugging.md` |
 
-## manifest.json — 8 content-script blocks
+## manifest.json — 9 content-script blocks
 
 JSON has no comments, so the reasoning lives here. **Do not merge these blocks.**
 
@@ -49,12 +50,14 @@ JSON has no comments, so the reasoning lives here. **Do not merge these blocks.*
 | 3 | every combos `game/` file | `document_start` | MAIN | Needs the page's own `window` for the `Object.prototype` traps. Must be `document_start` — the state is built later, but the trap has to be armed first. |
 | 3a | advisor `recon/discover.js` + `recon/detect.js` | `document_start` | ISOLATED | The advisor's trap-field discovery — needs `chrome.storage` for its cache. Kept out of block 2 for the same removability reason as 3b. |
 | 3b | advisor `recon/game/` + `bridge/game/` | `document_start` | MAIN | Same trap technique for the battle state. Kept out of block 3 — a different feature must stay separately removable. |
+| 3c | HUD `model/elements.js` + `capture/game/` + `apply/game/` + `bridge/game/` | `document_start` | MAIN | Traps the HUD root and the battle settings, and shadows the two render methods — all of it must be armed before a battle builds its HUD. Within `apply/game/`, `overrides.js` and `push.js` come before `transform.js`, which calls them. Its own block for the same removability reason as 3a/3b. |
+| 3d | HUD `model/layout.js` + `discovery/` | `document_start` | ISOLATED | Reads this build's names, add sites and geometry out of the bundle and posts the names to 3c — early, for the same reason as block 2: the BattleSettings trap has to be on the right field before the game builds its settings. Defines `TankiQoL.HudRecipes`, which block 5 reads. `layout.js` comes first: the geometry is composed with it. |
 | 4 | translator `main/` | `document_start` | MAIN | Same, for the chat HUD. |
-| 5 | `shared/` + combos (DOM side) + advisor (model + view) | `document_idle` | ISOLATED (default) | Pure DOM work that only makes sense once the page exists. Its internal order is the dependency chain below. The advisor loads after combos because it calls `InstantLoader`. |
+| 5 | `shared/` + combos (DOM side) + advisor (model + view) + HUD (model, dom, editor) | `document_idle` | ISOLATED (default) | Pure DOM work that only makes sense once the page exists. Its internal order is the dependency chain below. The advisor loads after combos because it calls `InstantLoader`; the HUD editor loads last because it uses the shared components and combos' selectors. |
 
 `shared/components/switch.js` and `select.js` appear in **both** block 4 and
-block 5. Not a mistake: JS worlds don't share a `window`, so each world needs its
-own copy.
+block 5, and `features/hud/model/elements.js` in both block 3c and block 5. Not
+a mistake: JS worlds don't share a `window`, so each world needs its own copy.
 
 Blocks 2 and 5 are both combos and both ISOLATED but must stay separate: block 2
 is the bridge to the game's internals and has to be armed at `document_start`,
@@ -71,8 +74,18 @@ loads.** Within block 5 the order is:
 4. `features/combos/view/` — base file first, then its mixins (`view/card/*`
    after `combo_card_renderer.js`, `view/*.js` after `view_renderer.js`)
 5. `features/combos/main.js` — orchestrates combos
-6. `features/advisor/` — bridge, model, view, `main.js`; last, because it
+6. `features/advisor/` — bridge, model, view, `main.js`; because it
    equips through combos' `InstantLoader`
+7. `features/hud/` — last, because the editor uses the shared components and
+   combos' `DOM` selectors. Inside it: `model/` (without `rects.js`, and
+   without `layout.js`, which block 3d already loaded); bridge, store; `dom/` — catalog, markup, ghost; then
+   `model/rects.js`, which reads the ghost; `dom/apply.js`; `editor/` — shapes,
+   `stage_rules.js` before `stage.js`, drag, topbar, viewport, `editor_screen.js`,
+   settings button; `main.js`
+
+Block 3d (the HUD discovery) is `layout.js`, then `read.js` — every other
+`HudParse` file destructures its helpers at load — then the readers, then
+`compose.js`, and `detect.js` last.
 
 Block 3 (the MAIN-world files) ends with `discovery/game/boot.js`, which arms the
 traps once every other file has defined its half of `__CMB.internals`.
@@ -90,6 +103,8 @@ a feature must not scatter loose generic keys into it.
 | `local` | `randomizerSettings` | combos | randomizer options object |
 | `local` | `whatsNewSeenVersion` | combos | the news version the user acknowledged |
 | `local` | `garageConstants:v<N>:<bundle url>` | combos | cached per-build discovery result |
+| `local` | `hudLayout` | HUD editor | per-layout element preferences + the measured geometry (shape in `hud.md`) |
+| `local` | `hudRecipes:v<N>:<bundle url>` | HUD editor | cached per-build geometry discovery |
 | `local` | `hudConstants:<bundle url>` | translator | cached per-build discovery result |
 | `sync` | `translator` | translator | `{ enabled, showOriginal, targetLang }` |
 
@@ -183,7 +198,10 @@ features/combos/
 
 shared/
 ├── icons.js                   # SVG paths more than one feature draws
-└── components/                # drawer / switch / select
+└── components/                # drawer / switch / select / button / slider / dialog
+    #   dialog.js is the game's modal chrome (danger = red, warning = yellow);
+    #   every modal in the extension goes through it. button.js and slider.js
+    #   are the game's own green button and settings slider.
 
 features/advisor/              # recommended protections — see advisor.md
 ├── main.js                    # starts the panel while the garage is on screen
@@ -204,6 +222,17 @@ features/advisor/              # recommended protections — see advisor.md
     ├── panel_render.js        #   builds the DOM, harvests the game's icons
     ├── protection_panel.js    #   injection, runtime placement, equipping
     └── protection_panel.css
+
+features/hud/                  # the battle HUD editor — see hud.md
+├── main.js                    # injects the editor button while Settings is open
+├── store.js                   # the one storage key: hudLayout
+├── model/                     # pure — catalogue, geometry, replay, push, overlap, undo
+├── discovery/                 # names, add sites and geometry, read out of the bundle (TankiQoL.HudParse)
+├── capture/game/              # [MAIN] the HUD root, the layout, the measurements
+├── apply/game/                # [MAIN] overrides + push + the single render hook; chat alpha
+├── dom/                       # the HTML elements: catalogue, hidden copy, live apply
+├── bridge/                    # its own pipe, tagged __hud
+└── editor/                    # the settings button, the screen, stage, shapes, drag
 
 features/translator/
 ├── isolated/                  # [ISOLATED] the only chrome.* access

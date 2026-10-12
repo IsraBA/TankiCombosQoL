@@ -1,14 +1,20 @@
 // מודל "מה חדש": מוצג פעם אחת לכל גרסת חדשות, וכל דרך סגירה מסמנת
-// שנצפה. הכל מזויף חוץ מהקובץ הנבדק.
+// שנצפה. רץ על הדיאלוג המשותף (shared/components/dialog.js) מעל DOM מזויף.
 // node build/harnesses/test_whats_new.js
 
 const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
+const { makeFakeDom } = require("./fake_dom");
 
 const EXT =
   "c:/Users/User/Documents/programming/Tanki Extensions/Combos Extension/TankiCombosQoL";
-const FILE = "features/combos/view/panels/whats_new_modal.js";
+const FILES = [
+  "shared/icons.js",
+  "shared/components/button.js",
+  "shared/components/dialog.js",
+  "features/combos/view/panels/whats_new_modal.js",
+];
 
 let failures = 0;
 function ok(label, cond) {
@@ -29,30 +35,7 @@ function eq(label, got, want) {
 
 function makeEnv(stored) {
   const store = Object.assign({}, stored);
-  const listeners = [];
-  const nodes = [];
-
-  function makeEl() {
-    const el = {
-      style: {},
-      children: [],
-      _html: "",
-      className: "",
-      id: "",
-      set innerHTML(v) { this._html = v; },
-      get innerHTML() { return this._html; },
-      appendChild(c) { this.children.push(c); return c; },
-      remove() {},
-      querySelector(sel) {
-        return (this._html || "").includes(sel.replace(/[[\]"']/g, "").split("=").pop())
-          ? makeEl()
-          : null;
-      },
-      querySelectorAll() { return []; },
-    };
-    nodes.push(el);
-    return el;
-  }
+  const dom = makeFakeDom();
 
   const ctx = {
     console: { log() {}, error() {} },
@@ -73,15 +56,7 @@ function makeEnv(stored) {
         },
       },
     },
-    document: {
-      body: { appendChild() {} },
-      createElement: makeEl,
-      addEventListener(type, fn) { listeners.push({ type, fn }); },
-      removeEventListener(type, fn) {
-        const i = listeners.findIndex((l) => l.type === type && l.fn === fn);
-        if (i >= 0) listeners.splice(i, 1);
-      },
-    },
+    document: dom.document,
   };
   // המודול מאזין ל-window עבור הממסר מ-MAIN
   const winListeners = [];
@@ -94,13 +69,9 @@ function makeEnv(stored) {
     "globalThis.window = globalThis; window.TankiQoL = { LanguageManager: { getUIText: (k) => 'T:' + k } };",
     ctx,
   );
-  // הכותרת מציירת את אייקון הקונפטי מ-shared/icons.js
-  vm.runInContext(fs.readFileSync(path.join(EXT, "shared/icons.js"), "utf8"), ctx, {
-    filename: "shared/icons.js",
-  });
-  vm.runInContext(fs.readFileSync(path.join(EXT, FILE), "utf8"), ctx, {
-    filename: FILE,
-  });
+  for (const f of FILES) {
+    vm.runInContext(fs.readFileSync(path.join(EXT, f), "utf8"), ctx, { filename: f });
+  }
 
   // מחקה את מה ש-__CMB.resetWhatsNew() מפרסם מהעולם MAIN
   function relay(action) {
@@ -108,13 +79,9 @@ function makeEnv(stored) {
     for (const fn of winListeners) fn({ source: ctx.window, data });
   }
 
-  return {
-    ctx,
-    store,
-    listeners,
-    relay,
-    M: ctx.window.TankiQoL.WhatsNewModal,
-  };
+  const dialogRoot = () => dom.document.getElementById("cme_whats-new-root");
+
+  return { ctx, store, dom, relay, dialogRoot, M: ctx.window.TankiQoL.WhatsNewModal };
 }
 
 // ---- טעינה נקייה: טרם נצפה ----
@@ -126,32 +93,56 @@ ok("the shipped module loaded", typeof env.M.maybeShow === "function");
 ok("a fresh profile has not seen it", env.M.isUnseen() === true);
 
 env.M.maybeShow();
-ok("…so it opens", env.M.modalElement.style.display === "block");
+ok("…so it opens (a dialog root is in the body)", !!env.dialogRoot());
 ok("…and the badge is still wanted while it is open", env.M.isUnseen() === true);
+ok("…the dialog wears the shared chrome", !!env.dialogRoot().querySelector(".cme_dialog"));
 
 env.M.hide();
 ok("closing marks it seen", env.M.isUnseen() === false);
 eq("…and the version is what got stored", env.store[KEY], V);
-ok("…and the Escape listener was removed", env.listeners.length === 0);
+ok("…the dialog left the DOM", env.dialogRoot() === null);
+ok("…and the Escape listener was removed", env.dom.docListeners.length === 0);
 
 // שנייה, שלישית — לא נפתח שוב באותה גרסה
-env.M.modalElement.style.display = "none";
 env.M.maybeShow();
-ok("it does not open a second time", env.M.modalElement.style.display === "none");
+ok("it does not open a second time", env.dialogRoot() === null);
+
+// ---- כל דרך סגירה נחשבת: הכפתור, ה-X, הרקע, Escape ----
+
+env = makeEnv({});
+env.M.show();
+env.dialogRoot().querySelector('[data-action="close"]').click();
+ok("the button closes and marks seen", env.dialogRoot() === null && env.M.isUnseen() === false);
+
+env = makeEnv({});
+env.M.show();
+env.dialogRoot().querySelector(".cme_dialog-close").click();
+ok("the X closes and marks seen", env.dialogRoot() === null && env.M.isUnseen() === false);
+
+env = makeEnv({});
+env.M.show();
+env.dom.keydown("Escape");
+ok("Escape closes and marks seen", env.dialogRoot() === null && env.M.isUnseen() === false);
+
+env = makeEnv({});
+env.M.show();
+const backdrop = env.dialogRoot().querySelector(".cme_dialog-backdrop");
+(backdrop.listeners.click || []).forEach((fn) => fn({ target: backdrop }));
+ok("the backdrop closes and marks seen", env.dialogRoot() === null && env.M.isUnseen() === false);
 
 // ---- פרופיל שכבר ראה את הגרסה הזאת ----
 
 env = makeEnv({ [KEY]: V });
 ok("a profile that already saw this version: no badge", env.M.isUnseen() === false);
 env.M.maybeShow();
-ok("…and nothing opens", env.M.modalElement === null);
+ok("…and nothing opens", env.dialogRoot() === null);
 
 // ---- גרסת חדשות קודמת = עדכון חדש, מציגים שוב ----
 
 env = makeEnv({ [KEY]: "3.1" });
 ok("an older seen-version counts as unseen", env.M.isUnseen() === true);
 env.M.maybeShow();
-ok("…so the next update shows again", env.M.modalElement.style.display === "block");
+ok("…so the next update shows again", !!env.dialogRoot());
 
 // ---- עוזר הקונסול ----
 
@@ -164,7 +155,7 @@ ok("before reset: seen", env.M.isUnseen() === false);
   ok("…and reports back to the console", typeof msg === "string" && msg.length > 0);
 
   env.M.maybeShow();
-  ok("…so it opens again", env.M.modalElement.style.display === "block");
+  ok("…so it opens again", !!env.dialogRoot());
 
   // ---- הבאדג' בלובי מתרענן כשהמודל נסגר ----
 
@@ -192,15 +183,20 @@ ok("before reset: seen", env.M.isUnseen() === false);
 
   env = makeEnv({});
   env.M.show();
-  const html = env.M.modalElement.innerHTML;
+  const text = env.dialogRoot().textContent;
   const keys = ["whatsNewTitle", "whatsNewGotIt"].concat(env.M._internals.LINES);
   ok(
     "every string is a translated key, none hardcoded",
-    keys.every((k) => html.includes("T:" + k)),
+    keys.every((k) => text.includes("T:" + k)),
   );
+  const h1 = env.dialogRoot().querySelector("h1");
   ok(
     "the title leads with the confetti icon",
-    html.indexOf("cme_whats-new-party") < html.indexOf("T:whatsNewTitle"),
+    h1.innerHTML.includes("cme_whats-new-party") && h1.textContent.includes("T:whatsNewTitle"),
+  );
+  ok(
+    "the list is left-aligned, the one deliberate departure",
+    !!env.dialogRoot().querySelector(".cme_dialog-body--left"),
   );
 
   console.log(

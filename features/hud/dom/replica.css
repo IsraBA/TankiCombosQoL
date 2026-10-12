@@ -1,0 +1,134 @@
+/* features/hud/dom/replica.css */
+
+/* כללי ה-HUD של המשחק, מילה במילה, על השמות עם cme_. הרציונל: CLAUDE.mds/hud.md */
+
+.cme_hud-dom {
+  font-family: BaseFontRegular, FallbackFontRegular;
+  font-size: 1rem;
+  color: rgb(255, 255, 255);
+  pointer-events: none;
+  user-select: none;
+}
+
+.cme_hud-dom span {
+  font-size: 1em;
+  color: rgb(255, 255, 255);
+}
+
+/* העותק הנסתר: בגודל החלון, רק למדידה */
+.cme_hud-ghost {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  visibility: hidden;
+  z-index: -1;
+  overflow: hidden;
+}
+
+/* ---- BattleHudComponentStyle ---- */
+
+.cme_hud-dom .cme_BattleHudComponentStyle-hudContainer {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  display: grid;
+  grid-template: "UserInfo Buttons" 10% "BattleLog TanksLog" 40% "Chat ." 40% ". Fund" 10% / 50% 50%;
+  user-select: none;
+}
+
+.cme_hud-dom .cme_BattleChatComponentStyle-rootDesktop {
+  position: absolute;
+  top: 65%;
+  left: 1em;
+  width: 40em;
+  height: 5em;
+}
+
+.cme_hud-dom .cme_BattleHudComponentStyle-buttonsContainer {
+  display: flex;
+  flex-direction: column;
+  padding-right: 0.813em;
+  padding-top: 0.813em;
+}
+
+.cme_hud-dom .cme_-flexEndAlignStart {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+}
+
+.cme_hud-dom .cme_BattleHudComponentStyle-fullScreenButton,
+.cme_hud-dom .cme_BattleHudComponentStyle-pauseButton,
+.cme_hud-dom .cme_BattleHudComponentStyle-tabButton {
+  display: flex;
+  justify-content: center;
+  flex-direction: row;
+  background-color: rgba(44, 49, 67, 0.5);
+  border-radius: 0.188em;
+  padding: 0.5em 0.8em;
+  margin-bottom: 0.4em;
+  align-items: center;
+}
+
+.cme_hud-dom .cme_BattleHudComponentStyle-fullScreenButton span,
+.cme_hud-dom .cme_BattleHudComponentStyle-pauseButton span,
+.cme_hud-dom .cme_BattleHudComponentStyle-tabButton span {
+  font-family: BaseFontBold, FallbackFontBold;
+  font-style: normal;
+  font-weight: 500;
+  font-size: 0.875em;
+  line-height: normal;
+  color: rgb(255, 255, 255);
+  margin-right: 0.5em;
+}
+
+.cme_hud-dom .cme_BattleHudComponentStyle-fullScreenButton img {
+  width: 1em;
+  height: 1em;
+}
+
+.cme_hud-dom .cme_BattleHudComponentStyle-pauseButton img {
+  width: 0.9375em;
+  height: 0.875em;
+}
+
+.cme_hud-dom .cme_BattleHudComponentStyle-tabButton img {
+  width: 0.8125em;
+  height: 0.75em;
+}
+
+/* ---- BattleHudFpsComponentStyle ---- */
+
+.cme_hud-dom .cme_BattleHudFpsComponentStyle-container {
+  display: flex;
+  flex-direction: column;
+  margin-top: 1em;
+  margin-bottom: 1em;
+  padding-right: 0.813em;
+}
+
+.cme_hud-dom .cme_BattleHudFpsComponentStyle-container span {
+  font-family: BaseFontBold, FallbackFontBold;
+  font-style: normal;
+  font-weight: 500;
+  font-size: 1em;
+  line-height: normal;
+  text-shadow: rgb(0, 0, 0) 0px 0px 0.2em;
+}
+
+.cme_hud-dom .cme_BattleHudFpsComponentStyle-row {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-start;
+  margin-left: 0.3em;
+}
+
+.cme_hud-dom .cme_BattleHudFpsComponentStyle-label {
+  margin-right: 3px;
+}
+
+.cme_hud-dom .cme_BattleHudFpsComponentStyle-value {
+  width: 2em;
+}

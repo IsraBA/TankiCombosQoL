@@ -8,6 +8,42 @@
 
   window.TankiQoL.DOM = {
     NOT_IN_GAME_CONTAINER: ".-container",
+    APP_ROOT: "#app-root",
+
+    // --- מסך ההגדרות (עורך ה-HUD) ---
+    SETTINGS_SCREEN: ".SettingsComponentStyle-blockContentOptions",
+    SETTINGS_ROW_BLOCK: ".SettingsComponentStyle-rowBlock",
+    SETTINGS_DROPDOWN_TITLE: ".SettingsComponentStyle-dropDownTitle",
+    // שמות מחלקה לכפתור החזרה של עורך ה-HUD
+    BACK_BUTTON_CLASS: "BreadcrumbsComponentStyle-backButton",
+    BACK_ARROW_CLASS: "IconStyle-iconBackArrow",
+
+    // --- ה-HUD של הקרב ב-HTML (שמות מחלקה; העותק לובש cme_) ---
+    HUD: {
+      container: "BattleHudComponentStyle-hudContainer",
+      buttonsContainer: "BattleHudComponentStyle-buttonsContainer",
+      buttonsRow: "-flexEndAlignStart",
+      fullScreenButton: "BattleHudComponentStyle-fullScreenButton",
+      pauseButton: "BattleHudComponentStyle-pauseButton",
+      tabButton: "BattleHudComponentStyle-tabButton",
+      fps: "BattleHudFpsComponentStyle-container",
+      fpsRow: "BattleHudFpsComponentStyle-row",
+      fpsLabel: "BattleHudFpsComponentStyle-label",
+      fpsValue: "BattleHudFpsComponentStyle-value",
+      chatInput: "BattleChatComponentStyle-rootDesktop",
+      userPanel: "UserInfoContainerStyle-blockLeftPanel",
+      rankIcon: "UserInfoContainerStyle-rankIconContainer",
+      rankIconClickable: "UserInfoContainerStyle-rankIconContainerClickable",
+      rightBorder: "UserInfoContainerStyle-containerRightBorder",
+      rankImage: "UserInfoContainerStyle-titleRankIcon",
+      progress: "UserInfoContainerStyle-containerProgressMainScreen",
+      name: "UserInfoContainerStyle-userNameRank",
+      textShadow: "UserInfoContainerStyle-textDecoration",
+      xpRow: "UserInfoContainerStyle-containerParameterProgress",
+      xpIcon: "UserInfoContainerStyle-xpIcon",
+      xpValue: "UserInfoContainerStyle-progressValue",
+    },
+
     // --- ניווט ראשי ---
     GARAGE_MENU_CONTAINER: ".GarageMenuComponentStyle-garageMenuContainer",
     MENU_CONTAINER:

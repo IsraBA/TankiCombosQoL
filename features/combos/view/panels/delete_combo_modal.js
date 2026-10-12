@@ -1,164 +1,48 @@
 // features/combos/view/panels/delete_combo_modal.js
 
-// קובץ זה אחראי ליצור ולנהל את המודל למחיקת קומבו
+// אישור מחיקת קומבו, על הדיאלוג המשותף (shared/components/dialog.js)
 (function () {
   "use strict";
 
   window.TankiQoL = window.TankiQoL || {};
 
   window.TankiQoL.DeleteComboModal = {
-    modalElement: null,
-    currentComboId: null,
-    currentComboName: null,
-    onConfirmCallback: null,
-    escapeHandler: null,
+    dialog: null,
 
-    // יצירת המודל (רק פעם אחת)
-    init() {
-      if (this.modalElement) return;
+    // נשמר לתאימות: הדיאלוג נבנה בכל הצגה
+    init() {},
 
-      // יצירת root למודל
-      const modalRoot = document.createElement("div");
-      modalRoot.id = "cme_modal-root";
-      modalRoot.style.display = "none";
-      document.body.appendChild(modalRoot);
-      this.modalElement = modalRoot;
-    },
-
-    // פתיחת המודל עם פרטי הקומבו
     show(comboId, comboName, onConfirm) {
       const LM = window.TankiQoL.LanguageManager;
+      const Dialog = window.TankiQoL.Dialog;
+      if (!Dialog) return;
+      this.hide();
 
-      // שמירת הנתונים
-      this.currentComboId = comboId;
-      this.currentComboName = comboName;
-      this.onConfirmCallback = onConfirm;
-
-      // יצירת המודל אם עדיין לא קיים
-      if (!this.modalElement) {
-        this.init();
-      }
-
-      // יצירת תוכן המודל
-      const modalHTML = `
-                <div class="cme_ModalStyle-rootHover">
-                    <div class="cme_DialogContainerComponentStyle-container">
-                        <!-- Header (title) -->
-                        <div class="cme_DialogContainerComponentStyle-header">
-                            <h1>${LM.getUIText("deleteComboModalTitle").replace("{comboName}", comboName)}</h1>
-                            <div class="cme_DialogContainerComponentStyle-containerForImg">
-                                <div class="cme_DialogContainerComponentStyle-imgClose" data-action="close"></div>
-                            </div>
-                        </div>
-                        
-                        <!-- Content (content) -->
-                        <div class="cme_DialogContainerComponentStyle-contentContainer">
-                            <div class="cme_DialogBuyGarageItemComponentStyle-container">
-                                <span>${LM.getUIText("deleteConfirm")}</span>
-                            </div>
-                        </div>
-                        
-                        <!-- Footer (buttons) -->
-                        <div class="cme_DialogContainerComponentStyle-footerContainer">
-                            <div class="cme_Common-flexCenterAlignCenter cme_DialogContainerComponentStyle-keyButton" data-action="cancel">
-                                <span>${LM.getUIText("cancel")}</span>
-                            </div>
-                            <div class="cme_Common-flexCenterAlignCenter cme_DialogContainerComponentStyle-enterButton" data-action="delete">
-                                <span>${LM.getUIText("delete")}</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-      this.modalElement.innerHTML = modalHTML;
-
-      // חיבור אירועים
-      this.bindEvents();
-
-      // הצגת המודל
-      this.modalElement.style.display = "block";
+      this.dialog = Dialog.open({
+        id: "cme_modal-root",
+        variant: "danger",
+        title: LM.getUIText("deleteComboModalTitle").replace("{comboName}", comboName),
+        body: LM.getUIText("deleteConfirm"),
+        buttons: [
+          { text: LM.getUIText("cancel"), variant: "secondary", action: "cancel" },
+          {
+            text: LM.getUIText("delete"),
+            variant: "primary",
+            action: "delete",
+            onClick() {
+              if (typeof onConfirm === "function") onConfirm(comboId);
+            },
+          },
+        ],
+        onClose: () => {
+          this.dialog = null;
+        },
+      });
     },
 
-    // סגירת המודל
     hide() {
-      if (this.modalElement) {
-        this.modalElement.style.display = "none";
-        this.modalElement.innerHTML = "";
-      }
-
-      // הסרת event listener של Escape
-      if (this.escapeHandler) {
-        document.removeEventListener("keydown", this.escapeHandler);
-        this.escapeHandler = null;
-      }
-
-      // איפוס הנתונים
-      this.currentComboId = null;
-      this.currentComboName = null;
-      this.onConfirmCallback = null;
-    },
-
-    // חיבור אירועים לכפתורים
-    bindEvents() {
-      if (!this.modalElement) return;
-
-      // כפתור סגירה (X)
-      const closeBtn = this.modalElement.querySelector('[data-action="close"]');
-      if (closeBtn) {
-        closeBtn.onclick = () => {
-          this.hide();
-        };
-      }
-
-      // כפתור ביטול
-      const cancelBtn = this.modalElement.querySelector(
-        '[data-action="cancel"]',
-      );
-      if (cancelBtn) {
-        cancelBtn.onclick = () => {
-          this.hide();
-        };
-      }
-
-      // כפתור מחיקה
-      const deleteBtn = this.modalElement.querySelector(
-        '[data-action="delete"]',
-      );
-      if (deleteBtn) {
-        deleteBtn.onclick = () => {
-          // קריאה ל-callback אם קיים
-          if (
-            this.onConfirmCallback &&
-            typeof this.onConfirmCallback === "function"
-          ) {
-            this.onConfirmCallback(this.currentComboId);
-          }
-
-          this.hide();
-        };
-      }
-
-      // סגירה בלחיצה על הרקע
-      const modalBackground = this.modalElement.querySelector(
-        ".cme_ModalStyle-rootHover",
-      );
-      if (modalBackground) {
-        modalBackground.onclick = (e) => {
-          // סגירה רק אם לחצו על הרקע ולא על התיבה עצמה
-          if (e.target === modalBackground) {
-            this.hide();
-          }
-        };
-      }
-
-      // סגירה במקש Escape
-      this.escapeHandler = (e) => {
-        if (e.key === "Escape") {
-          this.hide();
-        }
-      };
-      document.addEventListener("keydown", this.escapeHandler);
+      if (this.dialog) this.dialog.close();
+      this.dialog = null;
     },
   };
 })();

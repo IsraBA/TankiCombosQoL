@@ -5,7 +5,7 @@
 
   **Quality-of-life browser extension for Tanki Online**
 
-  [![Version](https://img.shields.io/badge/version-4.0-blue.svg)](manifest.json)
+  [![Version](https://img.shields.io/badge/version-5.0-blue.svg)](manifest.json)
   [![Manifest](https://img.shields.io/badge/manifest-v3-green.svg)](manifest.json)
 
 </div>
@@ -38,6 +38,9 @@ directly into the game's own interface:
   equips all of them with one button.
 - **Battle chat translation** — read foreign chat in your own language, in place
   on the game screen.
+- **Battle HUD editor** — drag, resize and fade the radar, the kill feed, the
+  supplies and the rest, and keep a separate arrangement for each of the game's
+  two HUD layouts.
 
 All of it is built to look and feel native: the UI mirrors the game's own
 colors, fonts, and hover states rather than announcing itself as a third-party
@@ -107,6 +110,27 @@ This does the remembering.
   Armadillo always takes the first slot when you have it.
 - **Stays out of the way** — nothing is shown outside a battle, or while the
   game is blocking equipment changes.
+
+### 🎛️ Battle HUD editor
+
+The game gives you two HUD layouts and nothing in between. This lets you place
+each piece where you want it.
+
+- **Open it from the game's own Settings** → Controls → **HUD EDITOR**. The
+  editor replaces the settings screen with a placeholder version of the battle
+  screen, the way the mobile client's control editor works.
+- **Drag to move, two sliders to resize (50-200%) and fade (0-100%)** — the
+  radar, the battle score and timer, the kill feed, the supplies, the grenade
+  and nuclear slots, the overdrive, and the health and energy bars.
+- **Elements cannot be dropped on top of each other** — the shape turns red and
+  the move is dropped.
+- **One arrangement per layout.** The game's centred layout and its default
+  layout keep separate settings, and switching between them in the game's own
+  settings switches which one you are editing.
+- **Undo the last change, or reset the whole layout.** Everything is saved as
+  you go, so there is no save button and nothing to lose.
+- Nothing is changed for anyone else, and nothing is sent anywhere — it is
+  purely how the game is drawn on your screen.
 
 ### 💬 Battle chat translation
 
@@ -187,6 +211,19 @@ with the full ranking above it. Click **EQUIP ALL** to wear them. The
 recommendation keeps updating while you stand there, so it reflects the battle
 as it develops.
 
+### Rearranging the battle HUD
+
+Open the game's **Settings** → **Controls** and click **HUD EDITOR**. Drag any
+piece to move it, or click it and use the two sliders to change its size and
+transparency. Elements refuse to sit on top of each other — the outline turns
+red and the move is dropped. The arrow at the top left takes you back, and
+everything is saved as you go.
+
+Each of the game's two HUD layouts keeps its own arrangement, so switching
+between them in the game's settings switches which one you are editing. The
+circular arrow undoes your last change; the red button resets the layout you are
+editing, and leaves the other one alone.
+
 ### Using chat translation
 
 It is on by default. Enter a battle and foreign messages will translate
@@ -201,6 +238,8 @@ original text and the translation.
 | --- | --- | --- |
 | `C` | Open the combo manager | Lobby / garage |
 | `Alt+T` | Toggle original ↔ translated chat | In battle |
+| `Ctrl+Z` | Undo the last change | HUD editor |
+| `Esc` | Leave the editor | HUD editor |
 
 ### Tips
 
@@ -217,7 +256,7 @@ sent anywhere is the text of a chat message you asked to have translated.**
 
 | Permission | Why it's needed |
 | --- | --- |
-| `storage` | saves your combos and settings locally |
+| `storage` | saves your combos, HUD arrangement and settings locally |
 | `*://*.tankionline.com/*` | the game page — read equipped items, inject the UI, locate the chat UI |
 | `translate.googleapis.com` | send message text to be translated |
 
@@ -288,11 +327,11 @@ listed in both worlds' content-script blocks; each world gets its own copy on
 
 ```
 .
-├── manifest.json              # 7 content-script blocks (CSS / translator ×2 / combos ×3 / advisor ×2)
+├── manifest.json              # 9 content-script blocks (CSS / translator ×2 / combos ×3 / advisor ×2 / hud)
 ├── background.js              # service worker — translation fetch
 ├── shared/
 │   ├── icons.js               # SVG paths more than one feature draws
-│   └── components/            # switch, select, drawer
+│   └── components/            # switch, select, drawer, button, slider, dialog
 ├── features/
 │   ├── combos/                # folders follow the flow; any game/ folder = MAIN world
 │   │   ├── main.js            # orchestrator
@@ -311,6 +350,11 @@ listed in both worlds' content-script blocks; each world gets its own copy on
 │   │   ├── bridge/            # its own pipe between the worlds
 │   │   ├── model/             # pure: ranking + your modules -> a recommendation
 │   │   └── view/              # the block injected into the Protection tab
+│   ├── hud/                   # the battle HUD editor
+│   │   ├── capture/game/      # [MAIN] hold the live HUD, measure what the game drew
+│   │   ├── apply/game/        # [MAIN] one render hook: move, resize, fade
+│   │   ├── model/             # pure: the element catalogue and the geometry
+│   │   └── editor/            # the editor screen opened from the game's Settings
 │   └── translator/
 │       ├── isolated/          # bridge.js, detect.js
 │       ├── main/              # chat.js, translate.js, settings.js, skiplist.js, toggle.js, gamesettings.js
@@ -378,6 +422,13 @@ least one non-English game locale if you touched UI or selectors.
 ---
 
 ### Version history
+
+**v5.0** — Added the battle HUD editor: move, resize and fade each element of
+the battle screen, with a separate arrangement for each of the game's two HUD
+layouts, edited from the game's own Settings. No new permissions.
+
+**v4.1** — Repaired chat translation after the translation endpoint started
+refusing the extension's requests.
 
 **v4.0** — Saving and equipping now run against the game's own state instead of
 clicking through the UI: instant, no flicker. Paint and skins became combo slots.

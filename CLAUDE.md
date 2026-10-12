@@ -9,13 +9,16 @@ A Chrome extension (Manifest V3) of quality-of-life tools for
 | **Combos**     | Save full equipment setups and equip them in one click     | `features/combos/`     |
 | **Translator** | Translates foreign battle chat in place on the game canvas | `features/translator/` |
 | **Advisor**    | Recommends protections mid-battle, from the enemy team      | `features/advisor/`    |
+| **HUD editor** | Move, resize and fade each battle HUD element              | `features/hud/`        |
 
 Combos and the translator are almost completely independent: different screens,
 different JS worlds, different storage areas. They share only the UI components
 in `shared/`. Keep it that way — a new feature is a new folder under
-`features/`, not additions to an existing one. The advisor is the one deliberate
-exception: it will equip through combos' own path rather than reimplement it, so
-it depends on combos and **never the reverse**.
+`features/`, not additions to an existing one. Two deliberate exceptions, both
+one-way: the advisor equips through combos' own path rather than reimplement it,
+and the HUD editor reads combos' `lib/constants.js` for its game selectors (the
+project keeps every game selector in that one file). Combos depends on
+**neither**.
 
 ## Read this first
 
@@ -43,13 +46,21 @@ says exactly which one that is. Do not load them all.
 5. **Never delete working code to replace it.** Build the new path beside the old
    one, rewire to it, and move the old one into an `old/` folder next to it
    (`save/old/`, `equip/old/` are exactly this).
-6. **Ship only what runs.** `CLAUDE.md`, `CLAUDE.mds/`, `docs/`, `HTML-examples/`
+6. **Never delete anything you did not create in this session.** No `rm -rf` on a
+   directory, no bulk delete, no "clean it first so the build is fresh" — list
+   what is inside, and ask. This is not theoretical: `build/dist/` was wiped that
+   way (Sep 2026) and took every previously built package with it. It is
+   **gitignored, so it has no backup**, and `make-zip.ps1` already replaces only
+   the one version it is building — there is never a reason to clear it. The
+   packages were rebuilt from each release commit via a detached `git worktree`,
+   which is also how to recover if it happens again.
+7. **Ship only what runs.** `CLAUDE.md`, `CLAUDE.mds/`, `docs/`, `HTML-examples/`
    and `build/` never go into the store zip — `docs/PACKAGING.md` is the source
    of truth and `build/make-zip.ps1` enforces it.
-7. **Keep the docs current.** Structure changes go into
+8. **Keep the docs current.** Structure changes go into
    `CLAUDE.mds/architecture.md`; anything a future agent would otherwise have to
    re-derive goes into the matching `CLAUDE.mds/` file.
-8. **Every round of edits ends the same way**, release or not: update the
+9. **Every round of edits ends the same way**, release or not: update the
    harnesses in `build/harnesses/`, run them all, then run `build/make-zip.ps1`.
    The full checklist is in `CLAUDE.mds/conventions.md` — do not skip it because
    the change looked small.
@@ -66,12 +77,12 @@ says exactly which one that is. Do not load them all.
   MAIN**, everything else in ISOLATED.
 - **Namespaces**: `window.TankiQoL` (ISOLATED, and the shared components in
   MAIN), `window.__CT` (translator internals, MAIN), `window.__CMB` (garage hook,
-  MAIN), `window.__ADV` (battle probe, MAIN).
+  MAIN), `window.__ADV` (battle probe, MAIN), `window.__HUD` (HUD editor, MAIN).
 - **CSS prefix**: every class the extension creates starts with `cme_`.
 - **Storage**: one key per feature. `savedCombos` and friends in `local`,
   `translator` in `sync`.
 - **Testing** is the offline harnesses in `build/harnesses/` (`node <file>.js`,
-  see rule 8) plus a manual pass in the game — the checklist is in
+  see rule 9) plus a manual pass in the game — the checklist is in
   `CLAUDE.mds/store.md`. Anything needing a real account or a live battle is
   manual-only.
 
@@ -79,16 +90,17 @@ says exactly which one that is. Do not load them all.
 
 ```
 .
-├── manifest.json          # 8 content-script blocks — see architecture.md
+├── manifest.json          # 9 content-script blocks — see architecture.md
 ├── background.js          # service worker: the cross-origin translation fetch
 ├── CLAUDE.md              # this file
 ├── CLAUDE.mds/            # the detailed docs (start at README.md)
 ├── docs/                  # PACKAGING.md, PRIVACY.md, STORE.md
 ├── build/make-zip.ps1     # builds the store zip
 ├── build/harnesses/       # the offline checks — plain `node <file>.js`
-├── shared/                # icons.js + components (drawer / switch / select)
+├── shared/                # icons.js + components (drawer/switch/select/button/slider/dialog)
 ├── features/combos/       # the combos feature — one folder per flow stage
 ├── features/advisor/      # recommended protections — recon / model / view
+├── features/hud/          # the battle HUD editor — capture / apply / editor
 ├── features/translator/   # the translator feature
 ├── assets/                # icons
 └── HTML-examples/         # real game HTML & CSS samples (reference, never shipped)

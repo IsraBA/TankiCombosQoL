@@ -31,12 +31,15 @@
   load();
 
   window.TankiQoL.WhatsNewModal = {
-    modalElement: null,
-    escapeHandler: null,
+    dialog: null,
 
     // הבאדג' בלובי תלוי באותו דגל; בזמן טעינה לא מהבהבים
     isUnseen() {
       return seen === false;
+    },
+
+    isOpen() {
+      return showing;
     },
 
     // נקרא בכל פתיחה של הכרטיסייה; מציג לכל היותר פעם אחת
@@ -47,61 +50,30 @@
 
     show() {
       const LM = window.TankiQoL.LanguageManager;
+      const Dialog = window.TankiQoL.Dialog;
       const t = (k) => (LM ? LM.getUIText(k) : k);
+      if (!Dialog || showing) return;
 
-      if (!this.modalElement) {
-        const root = document.createElement("div");
-        root.id = "cme_whats-new-root";
-        root.style.display = "none";
-        document.body.appendChild(root);
-        this.modalElement = root;
-      }
-
-      // אותו span של מודל המחיקה — כל הטיפוגרפיה מגיעה ממנו
-      const items = LINES.map((k) => "• " + t(k)).join("<br>");
-
-      this.modalElement.innerHTML = `
-                <div class="cme_ModalStyle-rootHover">
-                    <div class="cme_DialogContainerComponentStyle-container">
-                        <div class="cme_DialogContainerComponentStyle-header">
-                            <h1>${window.TankiQoL.Icons.party("cme_whats-new-party")}${t("whatsNewTitle")}</h1>
-                            <div class="cme_DialogContainerComponentStyle-containerForImg">
-                                <div class="cme_DialogContainerComponentStyle-imgClose" data-action="close"></div>
-                            </div>
-                        </div>
-
-                        <div class="cme_DialogContainerComponentStyle-contentContainer">
-                            <div class="cme_DialogBuyGarageItemComponentStyle-container">
-                                <span>${items}</span>
-                            </div>
-                        </div>
-
-                        <div class="cme_DialogContainerComponentStyle-footerContainer">
-                            <div class="cme_Common-flexCenterAlignCenter cme_DialogContainerComponentStyle-enterButton" data-action="close">
-                                <span>${t("whatsNewGotIt")}</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-      this.bindEvents();
-      this.modalElement.style.display = "block";
+      // כל דרך סגירה היא אישור שנצפה — X, הכפתור, הרקע או Escape
+      this.dialog = Dialog.open({
+        id: "cme_whats-new-root",
+        variant: "danger",
+        title: t("whatsNewTitle"),
+        titleIconHtml: window.TankiQoL.Icons.party("cme_whats-new-party"),
+        body: LINES.map((k) => "• " + t(k)).join("\n"),
+        bodyAlign: "left",
+        buttons: [{ text: t("whatsNewGotIt"), variant: "primary", action: "close" }],
+        onClose: () => {
+          this.dialog = null;
+          showing = false;
+          this.markSeen();
+        },
+      });
       showing = true;
     },
 
-    // כל דרך סגירה היא אישור שנצפה — X, הכפתור, הרקע או Escape
     hide() {
-      if (this.modalElement) {
-        this.modalElement.style.display = "none";
-        this.modalElement.innerHTML = "";
-      }
-      if (this.escapeHandler) {
-        document.removeEventListener("keydown", this.escapeHandler);
-        this.escapeHandler = null;
-      }
-      showing = false;
-      this.markSeen();
+      if (this.dialog) this.dialog.close();
     },
 
     markSeen() {
@@ -111,30 +83,6 @@
       } catch (e) { /* נשאר מסומן לסשן הזה */ }
       const injector = window.TankiQoL.LobbyButtonInjector;
       if (injector && injector.refreshBadge) injector.refreshBadge();
-    },
-
-    bindEvents() {
-      if (!this.modalElement) return;
-
-      for (const el of this.modalElement.querySelectorAll(
-        '[data-action="close"]',
-      )) {
-        el.onclick = () => this.hide();
-      }
-
-      const background = this.modalElement.querySelector(
-        ".cme_ModalStyle-rootHover",
-      );
-      if (background) {
-        background.onclick = (e) => {
-          if (e.target === background) this.hide();
-        };
-      }
-
-      this.escapeHandler = (e) => {
-        if (e.key === "Escape") this.hide();
-      };
-      document.addEventListener("keydown", this.escapeHandler);
     },
 
     // עוזר קונסול: מנקה את הדגל כדי להציג שוב בלי התקנה מחדש

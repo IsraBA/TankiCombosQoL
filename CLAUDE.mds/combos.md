@@ -532,13 +532,16 @@ Three things are worth knowing before changing any of it:
 
 ## The "what's new" modal
 
-Shown once when the combos tab is opened after an update. It **reuses the delete
-modal's chrome outright** — the same root rules, the same
-`cme_DialogContainerComponentStyle-*` classes, and the same
-`<div class="…-container"><span>` the delete modal puts its text in — so it ships
-with no CSS of its own and cannot drift from it. Building a `<ul>` instead was
-the first attempt and it inherited none of that typography, and missing the root
-rules (`position: fixed`, full-screen) left it uncentred.
+Shown once when the combos tab is opened after an update. It is built by
+**`shared/components/dialog.js`**, the one modal chrome every dialog in the
+extension goes through (delete, import/export, the HUD editor's reset), so it
+ships with almost no CSS of its own and cannot drift. Building a `<ul>` instead
+was the first attempt and it inherited none of that typography, and missing the
+root rules (`position: fixed`, full-screen) left it uncentred.
+
+> Sep 2026: the three modals used to each build the same markup by hand. They
+> now call `Dialog.open({variant, title, body, buttons})`; the hand-built
+> versions are in `view/panels/old/` under `…Legacy` names, wired to nothing.
 
 **The flag stores a version, not a boolean.** `whatsNewSeenVersion` holds the
 `NEWS_VERSION` the user acknowledged, so announcing the next release is one

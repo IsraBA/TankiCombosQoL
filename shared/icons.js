@@ -22,8 +22,29 @@
     "15.5949 12.5447M10.2377 7.18796C11 6.10991 11.5 5.10991 11.0082 3.52734M3.53577 " +
     "20.4645L7.0713 9.85791L14.1424 16.929L3.53577 20.4645Z";
 
+  // מצוירים ולא נטענים: קבצי ה-SVG של המשחק נושאים hash שמתחלף בכל בילד
+  function stroked(paths, className, extra) {
+    return (
+      '<svg class="' + (className || "") + '" viewBox="0 0 24 24" fill="none"' +
+      ' stroke="currentColor" stroke-width="2" stroke-linecap="round"' +
+      ' stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg">' +
+      paths.map((d) => '<path d="' + d + '"' + (extra || "") + "/>").join("") +
+      "</svg>"
+    );
+  }
+
   window.TankiQoL.Icons = {
     CHECK_PATH,
+
+    // חץ ביטול פעולה
+    undo(className) {
+      return stroked(["M4 9H14A5 5 0 0 1 14 19H9", "M8 5L4 9L8 13"], className);
+    },
+
+    // איקס, כמו כפתור האיפוס בעורך של המובייל
+    close(className) {
+      return stroked(["M6 6L18 18", "M18 6L6 18"], className);
+    },
 
     // קווי מתאר ולא מלא, ו-currentColor כדי לרשת את צבע הכותרת
     party(className) {

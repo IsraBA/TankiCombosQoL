@@ -1,0 +1,84 @@
+/* features/hud/editor/frame.css */
+
+/* הצורה על הבמה: המסגרת, הבחירה, הפסילה, וקווי ההצמדה */
+
+/* ---- צורה ---- */
+
+.cme_hud-shape {
+  --cme-hud-alpha: 1;
+  position: absolute;
+  box-sizing: border-box;
+  cursor: grab;
+}
+
+.cme_hud-shape--locked {
+  cursor: pointer;
+}
+
+.cme_hud-shape--dragging {
+  cursor: grabbing;
+}
+
+/* השלד מקבל את השקיפות; המסגרת נשארת קריאה */
+.cme_hud-sk {
+  position: absolute;
+  inset: 0;
+  opacity: var(--cme-hud-alpha);
+  pointer-events: none;
+}
+
+.cme_hud-shape-frame {
+  position: absolute;
+  inset: -0.375em;
+  border-radius: 0.5em;
+  border: 0.125em solid transparent;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+  pointer-events: none;
+}
+
+.cme_hud-shape:hover .cme_hud-shape-frame {
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+.cme_hud-shape--selected .cme_hud-shape-frame {
+  border-color: rgb(255, 188, 9);
+  background-color: rgba(255, 188, 9, 0.08);
+}
+
+.cme_hud-shape--invalid .cme_hud-shape-frame {
+  border-color: rgb(254, 102, 102);
+  background-color: rgba(254, 102, 102, 0.15);
+}
+
+/* ---- קווי ההצמדה לאמצע המסך ---- */
+
+.cme_hud-guide {
+  position: absolute;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0;
+  background-color: rgb(255, 188, 9);
+  transition: opacity 0.1s ease;
+}
+
+.cme_hud-guide--on {
+  opacity: 0.8;
+}
+
+.cme_hud-guide--v {
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  transform: translateX(-50%);
+}
+
+.cme_hud-guide--h {
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  transform: translateY(-50%);
+}

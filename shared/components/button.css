@@ -1,0 +1,111 @@
+/* shared/components/button.css */
+/* כפתורי המשחק: הערכים מ-SecuritySettingsComponentStyle-button (ירוק),
+   DialogContainerComponentStyle-keyButton (שקוף) ו-buttonsWidthBackReset (לבן). */
+
+.cme_button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  box-sizing: border-box;
+  min-width: 15em;
+  width: auto;
+  height: 3.125em;
+  margin: 0;
+  padding: 0 1.25em;
+  border-radius: 0.75rem;
+  text-align: center;
+  cursor: pointer;
+  user-select: none;
+  transition:
+    background 0.3s,
+    box-shadow 0.3s;
+  -webkit-box-align: center;
+  -webkit-box-pack: center;
+}
+
+.cme_button:hover {
+  box-shadow: rgb(255, 255, 255) 0em 0em 0em 2px;
+}
+
+.cme_button-text {
+  font-family: BaseFontBold, FallbackFontBold;
+  font-style: normal;
+  font-weight: 500;
+  font-size: 1em;
+  line-height: normal;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.cme_button-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cme_button-icon svg {
+  width: 1.5em;
+  height: 1.5em;
+  display: block;
+}
+
+.cme_button-icon + .cme_button-text:not([style*="none"]) {
+  margin-left: 0.625em;
+}
+
+/* ירוק — הפעולה הראשית */
+.cme_button--primary {
+  background-color: rgb(118, 255, 51);
+}
+
+.cme_button--primary .cme_button-text,
+.cme_button--primary .cme_button-icon {
+  color: rgb(0, 25, 38);
+}
+
+/* שקוף — ביטול ופעולות משניות */
+.cme_button--secondary {
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+.cme_button--secondary .cme_button-text,
+.cme_button--secondary .cme_button-icon {
+  color: rgb(255, 255, 255);
+}
+
+/* אדום — אישור של פעולה הרסנית (האדום של טיימר ההצטיידות) */
+.cme_button--danger {
+  background-color: rgb(254, 102, 102);
+}
+
+.cme_button--danger .cme_button-text,
+.cme_button--danger .cme_button-icon {
+  color: rgb(0, 25, 38);
+}
+
+/* לבן — "reset all" של המשחק */
+.cme_button--white {
+  background-color: rgb(255, 255, 255);
+}
+
+.cme_button--white .cme_button-text,
+.cme_button--white .cme_button-icon {
+  color: rgb(0, 25, 38);
+}
+
+/* ריבוע לאייקון בלבד */
+.cme_button--square {
+  min-width: 3.125em;
+  width: 3.125em;
+  padding: 0;
+}
+
+.cme_button--disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.cme_button--disabled:hover {
+  box-shadow: none;
+}
