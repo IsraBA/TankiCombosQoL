@@ -137,12 +137,17 @@
 
     // ניווט לקומבואים דרך תותחים
     async navigateToCombos() {
+      // הניווט הזה שלנו; בלי זה גם האוטומטי יוצא לדרך (ראה combos.md)
+      const AutoNavigator = window.TankiQoL?.AutoNavigator;
+      if (AutoNavigator) AutoNavigator.autoNavigateTriggered = true;
+
       // עכשיו נלחץ על התותחים כדי לפתוח את תפריט המוסך
       const turretsBlock = await NavigationHelpers.waitForElementAndClick(
         DOM.LOBBY_TURRETS_BLOCK,
       );
       if (!turretsBlock) {
         console.error("[ComboManager] Turrets block not found");
+        if (AutoNavigator) AutoNavigator.autoNavigateTriggered = false;
         return;
       }
 
@@ -152,6 +157,7 @@
       );
       if (!menuContainer) {
         console.error("[ComboManager] Menu container not found");
+        if (AutoNavigator) AutoNavigator.autoNavigateTriggered = false;
         return;
       }
 

@@ -18,7 +18,8 @@ discovery runs on. Keep it that way — a new feature is a new folder under
 `features/`, not additions to an existing one. Two deliberate exceptions, both
 one-way: the advisor equips through combos' own path rather than reimplement it,
 and the HUD editor reads combos' `lib/constants.js` for its game selectors (the
-project keeps every game selector in that one file). Combos depends on
+project keeps every game selector in that one file) and provides the destination
+of the "what's new" popup's button (`WhatsNewModal.provide`). Combos depends on
 **neither**.
 
 ## Read this first

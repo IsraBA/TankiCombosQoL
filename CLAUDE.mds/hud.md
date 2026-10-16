@@ -31,12 +31,14 @@ features/hud/
 │   ├── supplies.js           #   which slots, in what order, and where
 │   ├── texts.js              #   chat and battle status
 │   ├── killlog.js            #   the kill feed: its window area, through the DESKTOP config
+│   ├── navigation.js         #   the game's own way to Settings → Controls (export-table entries)
 │   ├── assets.js             #   the SVG URLs and the rank image
 │   ├── compose.js            #   discover(src) -> names, offsets, a recipe per element per layout
-│   └── detect.js             #   two jobs on shared/bundle.js: names + offsets to MAIN first, geometry last
+│   └── detect.js             #   three jobs on shared/bundle.js: names + offsets to MAIN first, then geometry, navigation
 ├── capture/game/             [MAIN] hold the game's live HUD
 │   ├── names.js              #   the names MAIN needs (no values until discovery) + role → element; applyGame()
 │   ├── trap.js               #   the Object.prototype trap + a tiny event bus
+│   ├── modules.js            #   every Kotlin module's $_$ export table, as the bundle runs
 │   ├── settings.js           #   BattleSettings + the hud service: layout & UI scale
 │   ├── root.js               #   the HUD root; records who added each element
 │   ├── groups.js             #   nodes → elements, including the supply-row split
@@ -45,7 +47,8 @@ features/hud/
 │   ├── overrides.js          #   the preferences and pivots from the bridge; each element's pivot
 │   ├── push.js               #   I.pushed: the effects rows off the bars' live box
 │   ├── transform.js          #   the single render hook: offset, scale, opacity
-│   └── chat_alpha.js         #   the chat's opacity, as a uniform in its own shaders
+│   ├── chat_alpha.js         #   the chat's opacity, as a uniform in its own shaders
+│   └── navigate.js           #   I.openControls: the game's two actions to Settings → Controls
 ├── dom/                      [ISOLATED] the HUD elements the game draws in HTML
 │   ├── catalog.js            #   what each one is: the selectors, shared by battle and ghost
 │   ├── markup.js             #   HudDomMarkup: the copy's tree, on cme_-prefixed classes
@@ -55,10 +58,10 @@ features/hud/
 │   └── apply.js              #   the preferences on the live nodes, in battle
 ├── bridge/                   the pipe, tagged __hud
 │   ├── bridge.js             #   [ISOLATED] TankiQoL.HudBridge
-│   └── game/bridge_main.js   #   [MAIN] state out, settings + pivots in, measure on demand
+│   └── game/bridge_main.js   #   [MAIN] state out, settings + pivots in, measure / navigate on demand
 ├── store.js                  [ISOLATED] the one storage key, hudLayout
 ├── editor/
-│   ├── settings_button.js    #   the HUD EDITOR button in Settings → Controls
+│   ├── settings_button.js    #   the HUD EDITOR button in Settings → Controls; goTo() gets there first
 │   ├── editor_screen.js      #   the screen: lifecycle, keys, sliders -> stage
 │   ├── topbar.js             #   HudTopbar: back, undo, reset, sliders, title
 │   ├── viewport.js           #   HudViewport: the stage at the window's aspect, resize watch
@@ -69,7 +72,7 @@ features/hud/
 │   ├── editor.css            #   the screen, the header bar, the viewport
 │   ├── frame.css             #   a shape's frame: selected, invalid, locked; the guides
 │   └── skeletons.css         #   the skeletons' own parts
-└── main.js                   injects the button, and keeps MAIN's pivots current
+└── main.js                   injects the button, keeps MAIN's pivots current, provides the news destination
 ```
 
 ## The two kinds of HUD element
@@ -155,10 +158,12 @@ trap fields, the rect accessors, the render and layout methods…) and the
 **offsets** of the add sites. `names.js` carries neither — `I.N` lists the
 names MAIN needs with no value, and `I.offsets` is empty — so nothing is trapped
 and no node gets a role until discovery answers. `discovery/` reads both out of
-the live bundle, and `detect.js` runs it as **two jobs** on `shared/bundle.js`:
+the live bundle, and `detect.js` runs it as **jobs** on `shared/bundle.js`:
 `discoverGame()` (names + offsets, ~0.55 s on a cold cache, cached as
-`hudGame:v<N>:<url>`) first of all four features, and the geometry
-(`hudRecipes:v<N>:<url>`, reusing the names) last. It posts the names to MAIN as
+`hudGame:v<N>:<url>`) first of all four features, then the geometry
+(`hudRecipes:v<N>:<url>`, reusing the names), and last the way to
+Settings → Controls (`hudNavigation:v<N>:<url>`, its own `NAV_VERSION` — see
+"Getting there from the news popup"). It posts the names to MAIN as
 `hudGame`, again on MAIN's `ready`. `I.applyGame()` takes a names set only when
 it is **complete** — a partial one would mix two builds — and emits `game`:
 `root.js` and `settings.js` arm traps on the new fields (and drop the ones they
@@ -559,7 +564,8 @@ browser you cannot tell which is current. The trapped object always can.
 ## The editor
 
 Entry point: **Settings → Controls**, a green `HUD EDITOR` button appended to
-the same row as the *Input device* dropdown. Clicking it hides the game's
+the same row as the *Input device* dropdown (the news popup's button goes there
+and clicks it for the user — next section). Clicking it hides the game's
 `-container` and mounts the editor in its place, on the same radial-gradient
 background the game uses.
 
@@ -681,6 +687,73 @@ background the game uses.
   underneath it. Keys are matched on `e.code`, so a Hebrew keyboard layout still
   hits `KeyZ`; Ctrl+Z is undo.
 
+## Getting there from the news popup
+
+The 5.0 "what's new" popup (combos' `whats_new_modal.js`) has a **Take me
+there** button: it opens Settings → Controls the way the game itself does, and
+then the editor.
+
+**How the game gets there.** It never clicks its way to a settings tab; it
+dispatches two Redux actions. The quests' "go" buttons (action type 3, the
+category from the quest's parameter) and the security dialog's button
+(`SECURITY`) both do
+
+```
+store.dispatch(new SelectSettingsCategory(category))   // function A(t){this.F=t}
+store.dispatch(new GoTo(new LobbySettings()))          // GoTo(screen, history = true)
+```
+
+and the lobby's own Settings item dispatches only the second, so the screen
+opens on whatever category was selected last. `history` is left at its default,
+like the game's own calls, so the screen's back button returns to where the user
+was (the garage, for the popup). We send exactly those two, with `CONTROL`.
+
+**Discovery (`discovery/navigation.js`).** Every anchor but one is a string:
+
+| what | anchor |
+|---|---|
+| `SettingsCategory.valueOf` | the exported `function(t){switch(t){case"ACCOUNT"…` whose default throws `"No enum constant tanks.client.lobby.redux.settings.SettingsCategory."`; it must have a `CONTROL` case |
+| the settings screen | `function X(){Y.call(this),this.F="Lobby.Settings"}` |
+| `GoTo` | its data-class `toString`: `"GoTo(screen="` |
+| the store, its accessor and dispatch | the site `<holder>().<getter>().<dispatch>(new GoTo(new Settings))` — the lobby's Settings item |
+| `SelectSettingsCategory` | the `.<dispatch>(new A(…))` just before such a site, where `A` is `function A(t){this.F=t}` and a reducer in A's module reads `t instanceof A?….(t.F)` |
+
+The output is not class names but **export-table entries**: for each of the
+five, its key in its module's `t.$_$` table and the **head** of its source (the
+whole function, up to 120 characters). All 12 builds, ~40 ms.
+
+**MAIN takes the functions from the module tables.** They are module-scoped:
+nothing reachable from the page holds them until the game itself navigates
+there. But every Kotlin module ends with `t.$_$=t.$_$||{}` on its webpack
+`exports`, and `capture/game/modules.js` keeps each table as it is created (an
+`Object.prototype` setter on `$_$` — a compiler name, armed before any discovery;
+architecture.md → "Names come only from the bundle"). `navigate.js` takes, for
+each entry, the value at its key whose `Function.prototype.toString` starts with
+its head: keys repeat across the ~60 module tables (the store holder's `u` is
+in half of them), the head is unique
+in the bundle (`test_hud_builds.js` checks that on every build). Both actions are
+built before either is sent — half a navigation is worse than none.
+
+**The order of events.** `HudSettingsButton.goTo()` (ISOLATED) →
+`HudBridge.openControls()` → MAIN dispatches → the game builds the Controls tab →
+as soon as our HUD EDITOR button can be injected into its row (the proof the tab
+is up; 5 s at most) → `HudEditor.open()`. It also asks combos for the tab back
+(`AutoNavigator.openOnNextGarage()`): the game's own back button returns to the
+garage on the **Paints** tab, which is where combos left it, so without the
+request the user lands on paints instead of the combos tab they came from
+(combos.md → "Getting to the combos tab"). A request that comes before the
+navigation entries waits for them up to 10 s and is then dropped, rather than
+navigating late; ISOLATED gives up at 11 s. If MAIN cannot find a function,
+nothing is dispatched and the button does nothing but a console warning.
+
+**The popup does not depend on the HUD.** `whats_new_modal.js` names a
+destination (`GO.to = "hudEditor"`) and shows the button only once a feature has
+called `WhatsNewModal.provide(to, run)`; `hud/main.js` does. The dependency runs
+HUD → combos, the same way as the HUD's use of combos' selectors and of
+`AutoNavigator` above.
+
+`__HUD.openControls()` runs the MAIN half alone, from the console.
+
 ## Storage
 
 One key, `local.hudLayout`:
@@ -708,10 +781,13 @@ default is deleted rather than stored.
 | `i2m` | `hudStateRequest` | — | ask for the current state |
 | `i2m` | `hudPivots` | `{pivots}` | the pivot of every element that has a recipe, per layout, in screen fractions |
 | `i2m` | `hudMeasureRequest` | `{id}` | measure now (the editor opened during a battle) |
-| `m2i` | `ready` | — | MAIN's listeners are up; ISOLATED re-sends the game names, the pivots and the settings |
+| `i2m` | `hudNav` | `{store, goTo, screen, select, category, control}` | the way to Settings → Controls, from `discovery/detect.js`; sent again on `ready` |
+| `i2m` | `hudControlsRequest` | `{id}` | open Settings → Controls (the news popup's button) |
+| `m2i` | `ready` | — | MAIN's listeners are up; ISOLATED re-sends the game names, the navigation, the pivots and the settings |
 | `m2i` | `hudState` | `{layout, showButtonLabels, uiSize, scale, inBattle, rootFontPx, dpr}` | pushed on change, polled once a second |
 | `m2i` | `hudMeasure` | a measurement record | pushed after a battle lays the HUD out |
 | `m2i` | `hudMeasureResult` | `{id, ok, record}` | reply |
+| `m2i` | `hudControlsResult` | `{id, ok, error}` | reply; none for a request dropped after waiting 10 s for discovery |
 
 ## Behaviours not to regress
 
@@ -731,6 +807,9 @@ default is deleted rather than stored.
   as a complete set.
 - Nothing we add to the page carries a game class name of the battle HUD —
   other extensions key on them (see "The HTML elements").
+- The `$_$` trap is the only one armed before discovery, and only because its
+  name is the compiler's. The navigation sends the game's own two actions,
+  built in full before either is dispatched — never a click walk through the UI.
 
 ## Debugging
 

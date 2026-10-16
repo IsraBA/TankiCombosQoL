@@ -75,6 +75,11 @@ send("hudConstants", Object.assign({}, NEXT, { offset: "ww9_1" }));
 ok("a foreign trap that took our field over is left in place",
   run("Object.getOwnPropertyDescriptor(Object.prototype, 'zz9_1').set === __foreign"));
 
+// סלנג של המשחק: OD = overdrive, בכל רישיות
+ok("OD alone is shown verbatim, in any case",
+  ["OD", "od", "Od", "gg OD"].every((t) => run("__CT_NOTR(" + JSON.stringify(t) + ")")));
+ok("…but a sentence around it is still translated", !run("__CT_NOTR('use your OD now')"));
+
 ok("nothing threw along the way", run("__CT_DEBUG.lastError") === null);
 
 console.log(failures ? `\n${failures} check(s) FAILED` : "\nall checks passed");

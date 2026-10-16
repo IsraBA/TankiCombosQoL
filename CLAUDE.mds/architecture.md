@@ -51,8 +51,8 @@ JSON has no comments, so the reasoning lives here. **Do not merge these blocks.*
 | 3 | every combos `game/` file | `document_start` | MAIN | Needs the page's own `window` for the `Object.prototype` traps. Must be `document_start`: its listeners have to exist when the names arrive, and the traps are armed the moment they do — before the game builds what they catch. |
 | 3a | `shared/bundle.js` + advisor `recon/discover.js` + `recon/detect.js` | `document_start` | ISOLATED | The advisor's trap-field discovery — needs `chrome.storage` for its cache. Kept out of block 2 for the same removability reason as 3b. |
 | 3b | advisor `recon/game/` + `bridge/game/` | `document_start` | MAIN | Same trap technique for the battle state. Kept out of block 3 — a different feature must stay separately removable. |
-| 3c | HUD `model/elements.js` + `capture/game/` + `apply/game/` + `bridge/game/` | `document_start` | MAIN | Traps the HUD root and the battle settings, and shadows the two render methods — all of it must be armed before a battle builds its HUD. Within `apply/game/`, `overrides.js` and `push.js` come before `transform.js`, which calls them. Its own block for the same removability reason as 3a/3b. |
-| 3d | `shared/bundle.js` + HUD `model/layout.js` + `discovery/` | `document_start` | ISOLATED | Reads this build's names, add sites and geometry out of the bundle and posts the names to 3c — early, for the same reason as block 2: the BattleSettings trap has to be on the right field before the game builds its settings. Defines `TankiQoL.HudRecipes`, which block 5 reads. `layout.js` comes first: the geometry is composed with it. |
+| 3c | HUD `model/elements.js` + `capture/game/` + `apply/game/` + `bridge/game/` | `document_start` | MAIN | Traps the HUD root and the battle settings, and shadows the two render methods — all of it must be armed before a battle builds its HUD. `capture/game/modules.js` must also run before the bundle does: it collects the Kotlin modules' export tables as they are created (the navigation to Settings → Controls takes its functions from them). Within `apply/game/`, `overrides.js` and `push.js` come before `transform.js`, which calls them. Its own block for the same removability reason as 3a/3b. |
+| 3d | `shared/bundle.js` + HUD `model/layout.js` + `discovery/` | `document_start` | ISOLATED | Reads this build's names, add sites, geometry and the way to Settings → Controls out of the bundle and posts the names to 3c — early, for the same reason as block 2: the BattleSettings trap has to be on the right field before the game builds its settings. Defines `TankiQoL.HudRecipes`, which block 5 reads. `layout.js` comes first: the geometry is composed with it. |
 | 4 | translator `main/` | `document_start` | MAIN | Same, for the chat HUD. |
 | 5 | `shared/` + combos (DOM side) + advisor (model + view) + HUD (model, dom, editor) | `document_idle` | ISOLATED (default) | Pure DOM work that only makes sense once the page exists. Its internal order is the dependency chain below. The advisor loads after combos because it calls `InstantLoader`; the HUD editor loads last because it uses the shared components and combos' selectors. |
 
@@ -92,10 +92,14 @@ loads.** Within block 5 the order is:
 Every discovery block starts with `shared/bundle.js`, which its `detect.js`
 registers with. Block 3d (the HUD discovery) is then `layout.js`, then `read.js`
 — every other `HudParse` file destructures its helpers at load — then the
-readers (`killlog.js` among them), then `compose.js`, and `detect.js` last.
+readers (`killlog.js` and `navigation.js` among them), then `compose.js`, and
+`detect.js` last.
 
 Block 3 (the MAIN-world files) ends with `discovery/game/boot.js`, which tells
 ISOLATED that every listener is up. No trap is armed until the names arrive.
+In block 3c, `capture/game/modules.js` follows `names.js` and `trap.js` (it
+reports errors through `NS.debug`), and `apply/game/navigate.js` comes before
+`bridge/game/bridge_main.js`, which calls it.
 
 ## Storage layout
 
@@ -114,6 +118,7 @@ a feature must not scatter loose generic keys into it.
 | `local` | `hudLayout` | HUD editor | per-layout element preferences + the measured geometry (shape in `hud.md`) |
 | `local` | `hudGame:v<N>:<bundle url>` | HUD editor | cached per-build names + add sites (what MAIN gets) |
 | `local` | `hudRecipes:v<N>:<bundle url>` | HUD editor | cached per-build geometry discovery |
+| `local` | `hudNavigation:v<N>:<bundle url>` | HUD editor | cached per-build way to Settings → Controls (export-table keys + source heads) |
 | `local` | `hudConstants:v<N>:<bundle url>` | translator | cached per-build discovery result |
 | `sync` | `translator` | translator | `{ enabled, showOriginal, targetLang }` |
 
@@ -142,8 +147,9 @@ discoveries run on one pipeline, `shared/bundle.js`:
 - **Priority = when the game builds the object.** The HUD's names go first
   (`BattleSettings` is built while the game boots), then combos (the garage
   proxy, built once when the lobby loads the garage), the advisor (the `User`, at
-  login), the translator (the chat HUD, per battle), and the HUD's geometry last
-  (only the editor needs it). Each result is posted before the next discovery
+  login), the translator (the chat HUD, per battle), and the HUD's geometry and
+  its navigation to Settings → Controls last (only the editor and the news
+  popup's button need them). Each result is posted before the next discovery
   starts, so MAIN has it ~0.5 s after the download instead of after all ~2 s.
 - **Cache per build, refreshed per release.** A cache entry made by this
   version of the extension is used as is — on every load but the first of a
@@ -159,6 +165,16 @@ a second after the bundle is downloaded, and an object the game built before
 that is missed until it is built again — the HUD's `BattleSettings` until a
 battle setting changes, the garage proxy until the next reload. A reload fixes
 it, and from then on the cache answers first.
+
+**One trap is armed before any names, on a compiler name.** Every Kotlin module
+of the bundle ends with `t.$_$=t.$_$||{}` on its webpack `exports`: `$_$` is the
+Kotlin/JS compiler's cross-module export table, the same in every build and in
+every Kotlin program, not a game name. `features/hud/capture/game/modules.js`
+puts a setter for it on `Object.prototype` at `document_start` and keeps each
+table as the module creates it. That is how MAIN reaches functions no live
+object holds (the classes behind the game's navigation — `hud.md`); discovery
+says which table entry is which. Each module writes `$_$` once and owns it from
+then on, so the trap costs nothing after startup.
 
 **Replaced names come off `Object.prototype`.** When newer names replace older
 ones (an old-version cache refreshed in the background), each feature removes the
@@ -284,15 +300,15 @@ features/advisor/              # recommended protections — see advisor.md
     └── protection_panel.css
 
 features/hud/                  # the battle HUD editor — see hud.md
-├── main.js                    # injects the editor button while Settings is open
+├── main.js                    # injects the editor button while Settings is open; the news button's destination
 ├── store.js                   # the one storage key: hudLayout
 ├── model/                     # pure — catalogue, geometry, replay, push, overlap, undo
-├── discovery/                 # names, add sites and geometry, read out of the bundle (TankiQoL.HudParse)
-├── capture/game/              # [MAIN] the HUD root, the layout, the measurements
-├── apply/game/                # [MAIN] overrides + push + the single render hook; chat alpha
+├── discovery/                 # names, add sites, geometry and the way to Settings → Controls (TankiQoL.HudParse)
+├── capture/game/              # [MAIN] the HUD root, the layout, the measurements, the Kotlin export tables
+├── apply/game/                # [MAIN] overrides + push + the single render hook; chat alpha; navigation
 ├── dom/                       # the HTML elements: catalogue, hidden copy, live apply
 ├── bridge/                    # its own pipe, tagged __hud
-└── editor/                    # the settings button, the screen, stage, shapes, drag
+└── editor/                    # the settings button (and the way there), the screen, stage, shapes, drag
 
 features/translator/
 ├── isolated/                  # [ISOLATED] the only chrome.* access

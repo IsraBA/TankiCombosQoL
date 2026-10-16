@@ -40,6 +40,7 @@ function makeEnv(stored) {
   const ctx = {
     console: { log() {}, error() {} },
     Promise,
+    setTimeout,
     chrome: {
       storage: {
         local: {
@@ -65,8 +66,10 @@ function makeEnv(stored) {
   };
 
   vm.createContext(ctx);
+  // הכותרת היא המחרוזת היחידה עם מציין מיקום, ולכן נבדקת כמו שהיא
   vm.runInContext(
-    "globalThis.window = globalThis; window.TankiQoL = { LanguageManager: { getUIText: (k) => 'T:' + k } };",
+    "globalThis.window = globalThis; window.TankiQoL = { LanguageManager: { getUIText: (k) =>" +
+      " k === 'whatsNewTitle' ? 'T:whatsNewTitle {version}' : 'T:' + k } };",
     ctx,
   );
   for (const f of FILES) {
@@ -191,13 +194,53 @@ ok("before reset: seen", env.M.isUnseen() === false);
   );
   const h1 = env.dialogRoot().querySelector("h1");
   ok(
-    "the title leads with the confetti icon",
-    h1.innerHTML.includes("cme_whats-new-party") && h1.textContent.includes("T:whatsNewTitle"),
+    "the title carries this news version, with no icon beside it",
+    h1.textContent === "T:whatsNewTitle " + V && !h1.innerHTML.includes("<svg"),
   );
   ok(
     "the list is left-aligned, the one deliberate departure",
     !!env.dialogRoot().querySelector(".cme_dialog-body--left"),
   );
+
+  // ---- "קח אותי לשם": קיים רק כשפיצ'ר אחר סיפק את היעד ----
+
+  ok("with no destination provided there is one button only",
+    !env.dialogRoot().querySelector('[data-action="go"]'));
+  env.M.hide();
+
+  env = makeEnv({});
+  let went = 0;
+  env.M.provide(env.M._internals.GO.to, () => { went++; });
+  env.M.show();
+  const go = env.dialogRoot().querySelector('[data-action="go"]');
+  ok("a provided destination adds the button, in its own translated words",
+    !!go && go.textContent.includes("T:" + env.M._internals.GO.text));
+  ok("…as the primary one, next to a secondary 'got it'",
+    go.classList.contains("cme_button--primary") &&
+    env.dialogRoot().querySelector(".cme_dialog-footer").querySelector('[data-action="close"]')
+      .classList.contains("cme_button--secondary"));
+  go.click();
+  ok("…clicking it closes the modal and marks it seen", env.dialogRoot() === null && env.M.isUnseen() === false);
+  ok("…before the destination runs", went === 0);
+  await new Promise((r) => setTimeout(r, 0));
+  ok("…which then runs once", went === 1);
+
+  // ---- כל מחרוזת של ההודעה קיימת בכל 11 השפות ----
+
+  const lm = { console: { log() {} } };
+  vm.createContext(lm);
+  vm.runInContext("globalThis.window = globalThis;" +
+    fs.readFileSync(path.join(EXT, "features/combos/lib/language_manager.js"), "utf8"), lm);
+  const LM = lm.window.TankiQoL.LanguageManager;
+  const CODES = ["en", "ru", "es", "pl", "pt", "de", "fr", "ja", "tr", "cs", "hi"];
+  const used = ["whatsNewTitle", "whatsNewGotIt", env.M._internals.GO.text].concat(env.M._internals.LINES);
+  const gaps = [];
+  for (const c of CODES) {
+    const lang = LM.getLanguageByCode(c);
+    for (const k of used) if (lang.code !== c || !lang.ui[k]) gaps.push(c + ":" + k);
+  }
+  ok("every string of the news is translated in all 11 languages" + (gaps.length ? " — missing " + gaps.join(",") : ""),
+    !gaps.length);
 
   console.log(
     failures ? "\n" + failures + " check(s) FAILED" : "\nall checks passed",

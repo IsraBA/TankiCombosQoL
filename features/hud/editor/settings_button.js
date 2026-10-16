@@ -43,5 +43,25 @@
       row.appendChild(btn);
       return true;
     },
+
+    // מבחוץ (ההודעה על הגרסה): ההגדרות בניווט של המשחק, ואז העורך
+    async goTo() {
+      const Q = window.TankiQoL;
+      const r = await Q.HudBridge.openControls();
+      if (!r.ok) {
+        console.warn("[TankiQoL] could not open Settings > Controls: " + r.error);
+        return false;
+      }
+      // יצאנו מכרטיסיית הקומבואים; כפתור החזרה של המשחק יחזיר אליה
+      if (Q.AutoNavigator) Q.AutoNavigator.openOnNextGarage();
+      // הכרטיסייה נבנית אחרי הניווט; הכפתור שלנו בשורה שלה הוא הסימן
+      const until = Date.now() + 5000;
+      while (!this.inject()) {
+        if (Date.now() > until) return false;
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+      Q.HudEditor.open();
+      return true;
+    },
   };
 })();

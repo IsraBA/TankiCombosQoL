@@ -57,6 +57,21 @@
       return;
     }
 
+    if (m.action === "hudNav") {
+      try {
+        I.applyNav(m.payload);
+      } catch (err) {
+        NS.debug.lastError = String(err);
+      }
+      return;
+    }
+
+    if (m.action === "hudControlsRequest") {
+      const id = (m.payload || {}).id;
+      I.openControls((r) => post("hudControlsResult", Object.assign({ id }, r)));
+      return;
+    }
+
     if (m.action === "hudStateRequest") {
       lastState = "";
       pushState();

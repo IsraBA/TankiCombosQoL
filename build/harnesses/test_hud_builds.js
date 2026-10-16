@@ -10,7 +10,7 @@ const EXT =
   "c:/Users/User/Documents/programming/Tanki Extensions/Combos Extension/TankiCombosQoL";
 const RESEARCH = "c:/Users/User/Documents/programming/Tanki Extensions/research";
 const FILES = ["features/hud/model/layout.js"].concat(
-  ["read", "engine", "roles", "modules", "strategies", "tank", "abilities", "supplies", "texts", "killlog", "assets", "compose"]
+  ["read", "engine", "roles", "modules", "strategies", "tank", "abilities", "supplies", "texts", "killlog", "navigation", "assets", "compose"]
     .map((f) => "features/hud/discovery/" + f + ".js"));
 
 let failures = 0;
@@ -26,6 +26,16 @@ for (const f of FILES) {
   vm.runInContext(fs.readFileSync(path.join(EXT, f), "utf8"), ctx, { filename: f });
 }
 const discover = ctx.window.TankiQoL.HudDiscover.discover;
+const navigation = ctx.window.TankiQoL.HudParse.navigation;
+
+// ה-MAIN מזהה כל פונקציה לפי מפתח + תחילת המקור; הצורה של כל אחת
+const NAV_SHAPES = {
+  store: /^function [\w$]+\(\)\{return null==([\w$]+)&&new [\w$]+,\1\}$/,   // singleton
+  goTo: /^function [\w$]+\(t,n\)\{n=n===[\w$]+\|\|n,this\.[\w$]+=t,this\.[\w$]+=n\}$/,  // (screen, history=true)
+  screen: /^function [\w$]+\(\)\{[\w$]+\.call\(this\),this\.[\w$]+="Lobby\.Settings"\}$/,
+  select: /^function [\w$]+\(t\)\{this\.[\w$]+=t\}$/,
+  category: /^function\(t\)\{switch\(t\)\{case"/,
+};
 
 // אילו שמות MAIN צריך: המפתחות של I.N, שאין להם ערך מראש
 const main = { window: {} };
@@ -58,7 +68,22 @@ let reference = null;
 
 for (const b of bundles) {
   console.log("\n-- " + b);
-  const got = discover(fs.readFileSync(path.join(RESEARCH, b), "utf8"));
+  const src = fs.readFileSync(path.join(RESEARCH, b), "utf8");
+
+  // הניווט של המשחק להגדרות > Controls
+  const nav = navigation(src);
+  ok("the game's own way to Settings > Controls was found", !!nav);
+  if (nav) {
+    const bad = Object.keys(NAV_SHAPES).filter((k) => !nav[k] || !NAV_SHAPES[k].test(nav[k].head));
+    ok("…each of its five functions has the expected shape" + (bad.length ? " — off: " + bad.join(",") : ""), !bad.length);
+    const twice = Object.keys(NAV_SHAPES).filter((k) => nav[k] && src.split(nav[k].head).length !== 2);
+    ok("…and each head occurs once in the bundle, so MAIN cannot pick a stranger" +
+      (twice.length ? " — repeated: " + twice.join(",") : ""), !twice.length);
+    ok("…the store is reached through an accessor and dispatched on", /^[\w$]+$/.test(nav.store.getter) &&
+      /^[\w$]+$/.test(nav.store.dispatch) && nav.control === "CONTROL");
+  }
+
+  const got = discover(src);
   ok("discovery runs", !!got && !!got.game);
   if (!got || !got.game) continue;
   const { names, offsets } = got.game;

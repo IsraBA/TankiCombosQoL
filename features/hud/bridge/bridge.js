@@ -38,7 +38,7 @@
       for (const fn of measureListeners) fn(m.payload);
       return;
     }
-    if (m.action === "hudMeasureResult") {
+    if (m.action === "hudMeasureResult" || m.action === "hudControlsResult") {
       const p = m.payload || {};
       const entry = pending.get(p.id);
       if (!entry) return;
@@ -47,6 +47,19 @@
       entry.resolve(p);
     }
   });
+
+  // בקשה ל-MAIN שתשובתה חוזרת עם אותו id
+  function request(action, timeoutMs) {
+    return new Promise((resolve) => {
+      const id = nextId++;
+      const timer = setTimeout(() => {
+        pending.delete(id);
+        resolve({ ok: false, error: "timeout" });
+      }, timeoutMs);
+      pending.set(id, { resolve, timer });
+      send(action, { id });
+    });
+  }
 
   window.TankiQoL.HudBridge = {
     // {layouts} — נשלח בכל שינוי, ונשלח שוב ב-ready
@@ -80,15 +93,12 @@
 
     // מדידה מיידית, לעורך שנפתח בזמן קרב
     measureNow() {
-      return new Promise((resolve) => {
-        const id = nextId++;
-        const timer = setTimeout(() => {
-          pending.delete(id);
-          resolve({ ok: false, error: "timeout" });
-        }, 3000);
-        pending.set(id, { resolve, timer });
-        send("hudMeasureRequest", { id });
-      });
+      return request("hudMeasureRequest", 3000);
+    },
+
+    // Settings > Controls בדרך של המשחק; עד 10 שניות לגילוי
+    openControls() {
+      return request("hudControlsRequest", 11000);
     },
   };
 

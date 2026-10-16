@@ -113,6 +113,7 @@
         "features/hud/model/elements.js",
         "features/hud/capture/game/names.js",
         "features/hud/capture/game/trap.js",
+        "features/hud/capture/game/modules.js",
         "features/hud/capture/game/settings.js",
         "features/hud/capture/game/root.js",
         "features/hud/capture/game/groups.js",
@@ -121,6 +122,7 @@
         "features/hud/apply/game/push.js",
         "features/hud/apply/game/transform.js",
         "features/hud/apply/game/chat_alpha.js",
+        "features/hud/apply/game/navigate.js",
         "features/hud/bridge/game/bridge_main.js"
       ],
       "run_at": "document_start",
@@ -141,6 +143,7 @@
         "features/hud/discovery/supplies.js",
         "features/hud/discovery/texts.js",
         "features/hud/discovery/killlog.js",
+        "features/hud/discovery/navigation.js",
         "features/hud/discovery/assets.js",
         "features/hud/discovery/compose.js",
         "features/hud/discovery/detect.js"

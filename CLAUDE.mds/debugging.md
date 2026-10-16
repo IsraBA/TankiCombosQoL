@@ -43,10 +43,13 @@ __HUD.overrides(); // the preferences currently applied, as they arrived from st
 __HUD.debug;       // {captures, adds, removes, settingsCaptures, serviceCaptures,
 //  layoutCalls, renderCalls, measures, names: null|"bundle", lastError}
 __HUD.internals.N; // the minified names in use — all null until discovery answers
+__HUD.openControls();               // Settings → Controls the game's way (the news button's MAIN half)
+__HUD.internals.kotlinTables.length; // Kotlin export tables seen at startup — 0 means $_$ was armed too late
 
 // HUD editor — ISOLATED side
 TankiQoL.HudStore.get();          // the whole stored object
 TankiQoL.HudEditor.open();        // opens it without the Settings button
+TankiQoL.HudSettingsButton.goTo(); // what the news popup's button does: Settings → Controls, then the editor
 TankiQoL.HudRecipes.get();        // the geometry read out of the bundle, per layout
 TankiQoL.HudRecipes.get().covered;                // which elements it managed to read
 TankiQoL.HudRecipes.get().game;                   // {names, offsets} sent to MAIN for this build
@@ -101,6 +104,10 @@ own console context instead.
 | another extension's battle-HUD tweaks stop working (e.g. Tanki Tweaks' Tab table turns half-transparent) | something of ours put a game class name of the battle HUD on the page — they watch the document for them. The hidden copy must use `HudDomCatalog.ghostClass` names only (`cme_` + the game's name) |
 | nothing moves in battle although the editor saved it                      | `__HUD.nodes()` — if `role` is `null` everywhere, the add-site table is wrong for this build. `__HUD.debug.names === null` means discovery never delivered: nothing is trapped at all. Check `TankiQoL.HudRecipes.get()` (null = `engine.js` failed), and run `test_hud_builds.js` with the new bundle in `research/` — it names the anchor that broke |
 | an element jitters or drifts every frame                                   | a layout pass is being transformed: `__HUD.debug.layoutCalls` should climb while `renderCalls` climbs too. A new element type whose `o4o` was not wrapped will do this                            |
+| the news popup's "Take me there" does nothing                             | the console has a `[TankiQoL] could not open Settings > Controls:` warning with the reason. `__HUD.openControls()` gives it again: `game code not found` = an entry did not match (run `test_hud_builds.js` on the new bundle — it names the function), `timeout` = the navigation discovery never arrived. `__HUD.internals.kotlinTables.length === 0` = the `$_$` trap missed the bundle's startup |
+| the first press of back does nothing, or a screen reopens by itself        | something awaited an element in order to click it and the element came back because the user left (`waitForElementAndClick` holds a `MutationObserver` for 10 s). Only click what is on screen now — combos.md → "Getting to the combos tab" |
+| back from the HUD editor lands on the paints tab                          | the garage is restored on whatever tab the game itself last had, which `safeActivateComboTab` left on Paints. Whoever takes the user out of the combos tab must call `AutoNavigator.openOnNextGarage()` |
+| it opens Settings but not on Controls, or the editor does not follow       | the category action was not the one the reducer copies (Settings opens on the last tab) — re-check the select anchor in `discovery/navigation.js`; or the Controls row changed and our button cannot be injected (`HudSettingsButton.inject()` returns false) |
 | `__CT_DEBUG.discovered === false` after a few seconds                     | `detect.js` couldn't parse the bundle — see the recovery procedure in `translator.md`                                                                                                            |
 | `__CT_HUD === null` after entering a battle                               | `__CT_STATE().names === null` = the names never arrived (see the row above); otherwise the trap never validated: the offset field name is wrong |
 | native equipping does nothing on the first load after a game update, fine after a reload | expected, not a bug: the names arrived after the game built the garage proxy (`__CMB.debug.proxyCaptured === false`). The extension has no names of its own — see `architecture.md` → "Names come only from the bundle" |
@@ -111,7 +118,7 @@ own console context instead.
 There is no test framework here. What exists is **`build/harnesses/`** — plain
 `node <file>` scripts, no dependencies, that run the _shipped_ code offline
 against the bundles in `../../../research/`. They live under `build/`, so they
-never reach the store zip. ~880 checks across 28 files (plus two helpers:
+never reach the store zip. ~960 checks across 29 files (plus two helpers:
 `fake_dom.js`, a shared minimal DOM the UI harnesses build real elements in, and
 `game_names.js`, which runs the shipped discovery on the newest bundle — the
 extension has no names of its own, so the sandbox harnesses get theirs the same
@@ -138,7 +145,8 @@ way the extension does):
 - **`test_translator_chat.js`** — `main/chat.js` in a sandbox against a fake chat
   HUD: no trap before the names arrive, the trap captures it, a message through a
   render method is recorded, and newer names replace the trap — the old one comes
-  off `Object.prototype`, unless a foreign trap has taken the field since.
+  off `Object.prototype`, unless a foreign trap has taken the field since. Also
+  the skip list's game slang (`OD` in any case, but not a sentence around it).
 - **`test_write_path.js`** — loads every MAIN-world `game/` file into a `vm` sandbox
   with a fake store and state, then asserts which actions each write dispatches:
   the protection set-diff, augment ownership rejection, skins. The write logic is
@@ -174,7 +182,9 @@ way the extension does):
 - **`test_whats_new.js`** — the update modal's gate: shown once per news
   version, every way of closing it counts as acknowledged, an older stored
   version means "show again", and `reset()` really clears the key. Both failure
-  modes here are silent — popping up every single time, or never again.
+  modes here are silent — popping up every single time, or never again. Also the
+  destination button (absent until provided; closes, marks seen, then runs it)
+  and that every string of the news exists in all 11 languages.
 - **`test_view_layer.js`** — the odd one out: it reads `styles.css`,
   `template.js` and `tank_preview.js` as **text**, because what it guards is a
   stacking/hit-testing contract, not logic. The view must stay
@@ -187,7 +197,23 @@ way the extension does):
   `research/`: every name MAIN needs, one add site per element (five for the
   status), the full geometry, identical across builds; `7f05e212` and
   `f1de53fa` against the offsets measured live, and `names.js` carrying no
-  names. ~17 s. Drop a new bundle in `research/` and run it before anything else.
+  names. Also the way to Settings → Controls: all five functions found, each of
+  the expected shape, and each head occurring once in the bundle (so MAIN cannot
+  take a stranger's). ~17 s. Drop a new bundle in `research/` and run it before
+  anything else.
+- **`test_combos_nav.js`** — the three ways into the combos tab, on a fake DOM:
+  which element each one clicks, that a navigation claims the auto-navigator's
+  flag so only one runs, that nothing is ever clicked because it reappeared after
+  the user left (the eaten back-press), and the one-shot request that brings the
+  tab back when the HUD editor is left.
+- **`test_hud_navigate.js`** — the same navigation in both worlds, on fake Kotlin
+  modules: the `$_$` trap armed with no names and recording each table, a
+  stranger module with the same keys first in line and never used, a request
+  before discovery waiting and then dispatching the category and `GoTo(Settings)`
+  in the game's order with `history` on, nothing dispatched when a function is
+  missing, a late request dropped instead of navigating late; then the ISOLATED
+  half — `goTo()` asking MAIN, waiting for the Controls tab and opening the
+  editor once, and doing nothing when MAIN cannot navigate.
 - **`test_hud_discovery.js`** — the geometry parser against the **real bundle**
   in `research/`: the four scaling strategies are identified, the recipes for
   the radar, bars, effects, chat, status, overdrive, grenades, supplies and the

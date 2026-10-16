@@ -12,48 +12,59 @@
     observer: null,
     observing: false,
     autoNavigateTriggered: false, // האם כבר ביצענו ניווט אוטומטי מאז ש-GARAGE_WRAPPER הופיע
+    pendingOpen: false, // בקשה חד-פעמית, גם כשההגדרה כבויה
+
+    // מי שלוקח את המשתמש מהכרטיסייה מבקש אותה בחזרה (עורך ה-HUD)
+    openOnNextGarage() {
+      this.pendingOpen = true;
+    },
+
+    // ברירת המחדל היא כן; רק כיבוי מפורש מבטל
+    autoOpenWanted() {
+      return new Promise((resolve) => {
+        try {
+          chrome.storage.local.get(["autoOpenCombosOnGarageEntry"], (r) => {
+            resolve(!r || r.autoOpenCombosOnGarageEntry !== false);
+          });
+        } catch (e) {
+          resolve(false);
+        }
+      });
+    },
 
     // ניווט אוטומטי לכרטיסיית הקומבואים - בדיוק כמו בלחיצה על הכפתור בלובי
     async navigateToCombos() {
-      // בדיקת ההגדרה
-      chrome.storage.local.get(
-        ["autoOpenCombosOnGarageEntry"],
-        async (result) => {
-          // אם אין ערך, ברירת מחדל היא true
-          const shouldAutoOpen = result.autoOpenCombosOnGarageEntry !== false;
+      const once = this.pendingOpen;
+      if (!once && !(await this.autoOpenWanted())) {
+        // המשתמש כיבה את האפשרות; ננסה שוב בכניסה הבאה
+        this.autoNavigateTriggered = false;
+        return;
+      }
 
-          if (!shouldAutoOpen) {
-            // אם המשתמש כיבה את האפשרות, נאפס את הדגל
-            this.autoNavigateTriggered = false;
-            return;
-          }
+      // במסך של פריט התפריט כבר קיים; בלובי המוסך לוחצים על התותחים
+      let menuContainer = document.querySelector(DOM.MENU_CONTAINER);
+      if (!menuContainer) {
+        // רק מה שעל המסך עכשיו: לחיצה שממתינה חוזרת אחרי שיצאנו
+        const turretsBlock = document.querySelector(DOM.LOBBY_TURRETS_BLOCK);
+        if (!turretsBlock) {
+          this.autoNavigateTriggered = false;
+          return;
+        }
+        turretsBlock.click();
+        menuContainer = await NavigationHelpers.waitForElement(
+          DOM.MENU_CONTAINER,
+        );
+      }
 
-          // עכשיו נלחץ על התותחים כדי לפתוח את תפריט המוסך
-          const turretsBlock = await NavigationHelpers.waitForElementAndClick(
-            DOM.LOBBY_TURRETS_BLOCK,
-          );
-          if (!turretsBlock) {
-            console.error("[ComboManager] Turrets block not found");
-            // אם לא מצאנו את התותחים, נאפס את הדגל וננסה שוב בפעם הבאה
-            this.autoNavigateTriggered = false;
-            return;
-          }
+      if (!menuContainer) {
+        console.error("[ComboManager] Menu container not found");
+        this.autoNavigateTriggered = false;
+        return;
+      }
 
-          // המתנה לטעינת תפריט המוסך - עם MutationObserver
-          const menuContainer = await NavigationHelpers.waitForElement(
-            DOM.MENU_CONTAINER,
-          );
-          if (!menuContainer) {
-            console.error("[ComboManager] Menu container not found");
-            // אם לא מצאנו את תפריט המוסך, נאפס את הדגל וננסה שוב בפעם הבאה
-            this.autoNavigateTriggered = false;
-            return;
-          }
-
-          // ניווט לכרטיסיית הקומבואים (הפונקציה המשותפת)
-          await NavigationHelpers.navigateToCombosTab(menuContainer);
-        },
-      );
+      // רק עכשיו הבקשה מומשה
+      this.pendingOpen = false;
+      await NavigationHelpers.navigateToCombosTab(menuContainer);
     },
 
     // בדיקה וטיפול בכניסה למוסך - נקרא מה-MutationObserver
@@ -105,6 +116,8 @@
       }
       this.observing = false;
       this.autoNavigateTriggered = false;
+      // יצאנו לקרב; בקשה שלא מומשה כבר לא רלוונטית
+      this.pendingOpen = false;
     },
   };
 })();

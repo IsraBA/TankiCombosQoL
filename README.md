@@ -116,7 +116,8 @@ This does the remembering.
 The game gives you two HUD layouts and nothing in between. This lets you place
 each piece where you want it.
 
-- **Open it from the game's own Settings** → Controls → **HUD EDITOR**. The
+- **Open it from the game's own Settings** → Controls → **HUD EDITOR**, or
+  straight from the one-time update note, whose button takes you there. The
   editor replaces the settings screen with a placeholder version of the battle
   screen, the way the mobile client's control editor works.
 - **Drag to move, two sliders to resize (50-300%) and fade (0-100%)** — the
@@ -148,8 +149,8 @@ each piece where you want it.
   translated.
 - **20 target languages**, picked from a native-styled dropdown injected into the
   game's own Settings screen.
-- **Slang stays slang** — `gg`, `ez`, `noob`, `hahaha` and friends are shown
-  verbatim and never sent anywhere.
+- **Slang stays slang** — `gg`, `ez`, `noob`, `OD`, `hahaha` and friends are
+  shown verbatim and never sent anywhere.
 - **Hebrew and Arabic read the right way round** — the game draws chat left to
   right whatever the language, so right-to-left messages arrive reversed on
   screen. The extension reorders them before they're drawn. This is a display

@@ -8,7 +8,7 @@ Translates foreign battle chat **in place on the game canvas**.
 | Braille spinner while translating | `⠋⠙⠹…` appended until the translation returns |
 | Swap to translation | `[<SRC>] » <translation>` in the target language |
 | No prefix when source == target | nothing to translate |
-| Universal slang verbatim | `gg`, `ez`, `noob`, `hahaha`, … never hit the API (`skiplist.js`) |
+| Universal slang verbatim | `gg`, `ez`, `noob`, `OD` (overdrive), `hahaha`, … never hit the API (`skiplist.js`) |
 | RTL displayed correctly | the canvas renderer has no bidi — see below |
 | Toggle original↔translation | in-game button (next to the chat alert button) + Alt+T, persisted |
 | Target language | native-styled dropdown injected into the game's Settings screen |
@@ -314,7 +314,11 @@ Pillow are installed):
 ## Known limitations
 
 - **Slang stays verbatim regardless of target language.** A Russian-speaking user
-  still sees `gg`/`noob` in English — they're universal gaming terms.
+  still sees `gg`/`noob` in English — they're universal gaming terms. The list is
+  matched in any case and folds repeats and plurals, so `OD`, `od` and `ODs` are
+  all skipped — and so is `odd` on its own, the price of the folding. Only a
+  message made *entirely* of such words is skipped; `use your OD now` is
+  translated.
 - **Enabling mid-battle** re-translates only the currently visible messages, not
   scrolled-off history. Changing the target language re-translates the visible
   ones. Both by design (`refreshVisibleTranslations`).

@@ -130,6 +130,16 @@ the bundle".
   that finds *a* name passes every harness that only checks for presence. Tie
   it to its meaning: a field count, the order a ctor assigns, a live
   measurement (the HUD), a value the game itself computes.
+- **Do what the game does, not what the user would click.** To get the game
+  somewhere, find the place where the game itself sends the player there and
+  replay *its* actions (the HUD's way to Settings → Controls is the quests'
+  "go" button: two dispatches). A click walk through the UI is slow, visible and
+  breaks on every layout change.
+- **A function no live object holds is still reachable** through its module's
+  Kotlin export table (`$_$`, collected by `hud/capture/game/modules.js`).
+  Identify it by its key **and the head of its source**, never the key alone —
+  keys repeat across the ~60 tables (`u` is in half of them) — and have the bundle harness check the
+  head occurs once.
 - **Research notes are hypotheses.** Before building on one, confirm it in the
   current bundle. The kill log's position was written down as "read from the
   HTML HUD" and believed for a month; the bundle had it as four literals.

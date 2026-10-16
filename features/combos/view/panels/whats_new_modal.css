@@ -2,10 +2,8 @@
 
 /* המסגרת כולה מגיעה מהדיאלוג המשותף; כאן רק ההבדלים המכוונים. */
 
-/* אייקון הקונפטי בכותרת; 1em מול h1 של 1.5em יוצא בגובה האותיות */
-#cme_whats-new-root .cme_whats-new-party {
-  width: 1em;
-  height: 1em;
-  vertical-align: -0.12em;
-  margin-right: 0.35em;
+/* הכותרת נושאת שם מלא + גרסה; 1.25em מחזיק אותה בשורה אחת */
+#cme_whats-new-root .cme_dialog-header h1 {
+  font-size: 1.25em;
+  padding-right: 2.4em;
 }

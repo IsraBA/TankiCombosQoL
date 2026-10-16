@@ -80,8 +80,17 @@ The zip lands in `build/dist/tanki-combos-qol-v<version>.zip`.
      regression).
 7. **Update notice**: on a profile that has not seen this `NEWS_VERSION`, the
    lobby COMBOS button carries a yellow badge and the modal opens on the first
-   entry to the tab. Closing it any way (X, button, backdrop, Escape) clears
-   both, permanently. `TankiQoL.WhatsNewModal.reset()` replays it.
+   entry to the tab. Closing it any way (X, either button, backdrop, Escape)
+   clears both, permanently. `TankiQoL.WhatsNewModal.reset()` replays it. Its
+   **Take me there** button closes it, opens Settings straight on the Controls
+   tab (no click walk through the lobby) and then the HUD editor; leaving the
+   editor and then Settings brings you back to the garage **on the combos tab**,
+   not on paints. Read the text in a few languages: the tab names in it are ours,
+   not the game's, and the title carries the version.
+   Also check the three ways into the tab and the back button after each: the
+   lobby COMBOS button, the **C** key, and entering the garage with auto-open on.
+   One press of back must leave — a press that seems to do nothing, or reopens
+   the tab, is the regression in `combos.md` → "Getting to the combos tab".
 8. **HUD editor** — the geometry comes from the game's code, so no battle is
    needed first:
    - on a fresh profile, Settings → Controls → HUD EDITOR: every element is
@@ -108,7 +117,7 @@ The zip lands in `build/dist/tanki-combos-qol-v<version>.zip`.
    - with **Tanki Tweaks** installed, open the editor, then a battle: its Tab
      table must still be styled (not half-transparent).
 9. **Translator**: enter a battle; foreign chat should show original → spinner →
-   `[SRC] » translation`. Check the toggle button next to the chat alert button
+   `[SRC] » translation`, and slang alone (`gg`, `OD`) shown as is. Check the toggle button next to the chat alert button
    and Alt+T. Open the game's Settings screen and confirm the injected toggle +
    language dropdown are there and styled natively. Resize / toggle fullscreen
    and confirm no duplicate chat lines.

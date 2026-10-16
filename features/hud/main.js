@@ -1,6 +1,6 @@
 // features/hud/main.js  [ISOLATED world]
 
-// מפעיל את כפתור העורך כשמסך ההגדרות על המסך, וסוגר את העורך כשהמסך נעלם.
+// מחבר את העורך לדף: הכפתור בהגדרות, סגירה כשהמסך נעלם, ויעד להודעה על הגרסה.
 (function () {
   "use strict";
 
@@ -27,6 +27,10 @@
     window.addEventListener("resize", send);
     send();
   })();
+
+  // ההודעה על הגרסה מובילה לעורך; הקומבו לא תלוי בנו
+  const news = window.TankiQoL.WhatsNewModal;
+  if (news) news.provide("hudEditor", () => window.TankiQoL.HudSettingsButton.goTo());
 
   setInterval(() => {
     const Q = window.TankiQoL;

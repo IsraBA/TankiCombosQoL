@@ -169,6 +169,11 @@
     // פונקציה משותפת לניווט לכרטיסיית הקומבואים
     // מניחה שכבר יש menuContainer (כי זה נקרא אחרי שכבר לחצנו על תותחים)
     async navigateToCombosTab(menuContainer) {
+      // כבר שם: שני ניווטים שנפגשו. מעבר נוסף דרך Paints מהבהב
+      const DOM = window.TankiQoL.DOM;
+      const open = window.TankiQoL?.MenuInjector?.comboTab;
+      if (open && open.classList.contains(DOM.ACTIVE_TAB_CLASS)) return true;
+
       // המתנה ש-MenuInjector יהיה מוכן עם הכרטיסייה
       const comboTabReady = await this.waitForComboTab();
       if (!comboTabReady) {

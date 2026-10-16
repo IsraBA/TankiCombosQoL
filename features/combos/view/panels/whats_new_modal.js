@@ -9,11 +9,12 @@
 
   const KEY = "whatsNewSeenVersion";
 
-  // להקפיץ שוב אחרי עדכון = לשנות את הערך הזה ואת רשימת השורות.
-  // מכוון שזה נשאר 4.0 בזמן ש-manifest כבר 4.1: 4.1 הוא תיקון שקט של שרת
-  // התרגום, בלי שינוי בממשק, ואין סיבה להקפיץ שוב חלונית למי שכבר סגר אותה.
-  const NEWS_VERSION = "4.0";
-  const LINES = ["whatsNewCombo", "whatsNewRecommend", "whatsNewPolish"];
+  // להקפיץ שוב אחרי עדכון: לשנות את הערך ואת השורות
+  const NEWS_VERSION = "5.0";
+  const LINES = ["whatsNewHud", "whatsNewFixes"];
+  // היעד של "קח אותי לשם" מגיע מפיצ'ר אחר; אין תלות בו
+  const GO = { to: "hudEditor", text: "whatsNewTakeMe" };
+  const destinations = {};
 
   // null = טרם נקרא. הכפתור בלובי נבנה מחדש תדיר, ולכן נשמר בזיכרון.
   let seen = null;
@@ -42,6 +43,11 @@
       return showing;
     },
 
+    // run() נקרא אחרי שהמודל נסגר; בלי יעד אין כפתור
+    provide(to, run) {
+      destinations[to] = run;
+    },
+
     // נקרא בכל פתיחה של הכרטיסייה; מציג לכל היותר פעם אחת
     maybeShow() {
       if (showing || seen !== false) return;
@@ -54,15 +60,18 @@
       const t = (k) => (LM ? LM.getUIText(k) : k);
       if (!Dialog || showing) return;
 
-      // כל דרך סגירה היא אישור שנצפה — X, הכפתור, הרקע או Escape
+      const run = GO && destinations[GO.to];
+      const gotIt = { text: t("whatsNewGotIt"), variant: run ? "secondary" : "primary", action: "close" };
+      const buttons = run ? [gotIt, { text: t(GO.text), variant: "primary", action: "go", onClick: () => setTimeout(run) }] : [gotIt];
+
+      // כל דרך סגירה היא אישור שנצפה — X, הכפתורים, הרקע או Escape
       this.dialog = Dialog.open({
         id: "cme_whats-new-root",
         variant: "danger",
-        title: t("whatsNewTitle"),
-        titleIconHtml: window.TankiQoL.Icons.party("cme_whats-new-party"),
+        title: t("whatsNewTitle").replace("{version}", NEWS_VERSION),
         body: LINES.map((k) => "• " + t(k)).join("\n"),
         bodyAlign: "left",
-        buttons: [{ text: t("whatsNewGotIt"), variant: "primary", action: "close" }],
+        buttons,
         onClose: () => {
           this.dialog = null;
           showing = false;
@@ -97,7 +106,7 @@
       });
     },
 
-    _internals: { KEY, NEWS_VERSION, LINES },
+    _internals: { KEY, NEWS_VERSION, LINES, GO },
   };
 
   // מאפשר __CMB.resetWhatsNew() מהקונסול של הדף, בלי להחליף הקשר

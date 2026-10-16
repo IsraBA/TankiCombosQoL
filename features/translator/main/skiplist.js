@@ -35,7 +35,7 @@
     'cool', 'ns', 'wd',
     // battle callouts
     'rush', 'push', 'back', 'def', 'defend', 'help', 'heal', 'mid', 'base',
-    'spawn', 'cap',
+    'spawn', 'cap', 'od', 'mid', 'midd'
   ];
 
   function squeeze(s) { return s.replace(/(.)\1+/gu, '$1'); }

@@ -217,6 +217,43 @@ Consequences worth knowing:
   menu is `z-index: 3`, the item lists `3`, the parameter blocks `3`. Anything
   the game leaves at `z-index: auto` is unclickable by design.
 
+## Getting to the combos tab
+
+Three ways in, all ending in `NavigationHelpers.navigateToCombosTab`: the lobby's
+own COMBOS button, the **C** key from the main lobby
+(`lobby_shortcut_handler.js`), and auto-open on entering the garage
+(`auto_navigator.js`, a `MutationObserver` on `GARAGE_WRAPPER`, the setting
+`autoOpenCombosOnGarageEntry`, default on). Three rules keep them from
+fighting each other:
+
+- **A navigation we start claims `AutoNavigator.autoNavigateTriggered` first.**
+  Opening the garage makes the wrapper appear, which is exactly the
+  auto-navigator's trigger, so without the claim two navigations run at once.
+  The C key always did this; the lobby button did not, which is how the bug
+  below got in.
+- **Never wait for an element in order to click it** (`waitForElementAndClick`)
+  unless it is already on screen. It keeps a `MutationObserver` alive for 10 s,
+  and the element may appear because the *user went somewhere else*. The
+  auto-navigator used to wait for the lobby's turrets block while the garage was
+  already open; when the player pressed back, the lobby came back, the pending
+  observer clicked the block, and the garage reopened on the combos tab — so the
+  first press of back did nothing and a second was needed. It now clicks only
+  what `querySelector` finds at that moment, and otherwise releases the flag so
+  the next mutation retries. (Don't "fix" this with a shorter timeout.)
+- **The tab is not reopened when it is already open.** `navigateToCombosTab`
+  returns early, so two navigations that meet don't flicker through Paints
+  twice.
+
+**Coming back to the tab from elsewhere**: `AutoNavigator.openOnNextGarage()` —
+a one-shot that opens the tab on the next garage entry even if auto-open is off,
+spent only when it actually opens (a half-built screen leaves it pending) and
+dropped on the way into a battle. The HUD editor's `goTo()` sets it, because the
+game's back button restores the garage on **Paints** — `safeActivateComboTab`
+left it there, and the game never knew about our tab.
+
+`build/harnesses/test_combos_nav.js` covers all of it, the back-press regression
+included.
+
 ## Hiding the game's content, and keeping it hidden
 
 `ViewRenderer.show()` hides the game's tab content — `hideGameContent()`:
@@ -547,10 +584,27 @@ root rules (`position: fixed`, full-screen) left it uncentred.
 `NEWS_VERSION` the user acknowledged, so announcing the next release is one
 constant plus a new `LINES` list in `view/panels/whats_new_modal.js` — a boolean
 would have to be cleared for every existing user, which storage cannot do.
+Strings of a past announcement are deleted with it (all 11 languages); the
+harness checks every string of the current one exists in all of them.
 
-- **Every way out counts as acknowledged** — the X, the button, the backdrop and
-  Escape all route through `hide()`, which marks it seen. Anything else leaves
-  users with a popup that keeps coming back.
+**A destination button, without a dependency.** `GO = {to, text}` names a
+destination; the button shows only if some feature has called
+`WhatsNewModal.provide(to, run)`. 5.0 announces the HUD editor, and
+`features/hud/main.js` provides `hudEditor` — the game's own navigation to
+Settings → Controls, then the editor (`hud.md` → "Getting there from the news
+popup"). With a destination, "got it" turns secondary and the destination is the
+primary button; clicking it closes the modal (so it counts as seen) and runs the
+destination after. Combos still depends on nothing: the HUD reaches in, not the
+other way round. Set `GO` to `null` for an announcement with nowhere to go.
+
+The wording is ours. The path in `whatsNewHud` (SETTINGS → CONTROLS → HUD
+EDITOR) is our translation of the game's tab names, which the game loads from a
+locale service at runtime — like `cooldownCaption` above; correct them against
+the game if they differ.
+
+- **Every way out counts as acknowledged** — the X, either button, the backdrop
+  and Escape all route through `hide()`, which marks it seen. Anything else
+  leaves users with a popup that keeps coming back.
 - **The lobby button's yellow badge reads the same flag**, so dismissing the
   modal clears the badge too; `hide()` calls `LobbyButtonInjector.refreshBadge()`
   so it goes away without waiting for a re-render. The flag is cached in memory
