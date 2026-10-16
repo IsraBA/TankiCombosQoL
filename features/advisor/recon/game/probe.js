@@ -1,6 +1,6 @@
 // features/advisor/recon/game/probe.js  [MAIN world]
 
-// מלכודות מצב הקרב. אוסף בלבד — שום פלט, שום עבודה מעבר ללכידה.
+// מלכודות מצב הקרב, בשמות שהגילוי שולח. אוסף בלבד — שום פלט.
 
 (function () {
   'use strict';
@@ -96,8 +96,8 @@
     }
   }
 
-  // שדה -> הסמנים שמאזינים עליו. הגילוי עשוי להחזיר שם שה-SEED כבר
-  // חימש עבור מחלקה אחרת, ודילוג שם היה מוחק את הלכידה בשקט.
+  // שדה -> הסמנים שמאזינים עליו. גילוי חדש עשוי להחזיר שם שכבר
+  // חומש עבור מחלקה אחרת, ודילוג שם היה מוחק את הלכידה בשקט.
   I.armed = new Map();
 
   function armTrap(prop, marker, onCapture) {
@@ -114,32 +114,45 @@
       }
       const list = [{ marker, onCapture }];
       I.armed.set(prop, list);
+      list.set = function (v) {
+        // שומרים כ-own property, כדי שהאובייקט יפסיק לעבור דרכנו
+        Object.defineProperty(this, prop, {
+          value: v,
+          writable: true,
+          configurable: true,
+          enumerable: true,
+        });
+        for (const e of list) {
+          try {
+            if (looksLike(this, e.marker)) e.onCapture(this);
+          } catch (err) {
+            NS.debug.lastError = String(err);
+          }
+        }
+      };
       Object.defineProperty(W.Object.prototype, prop, {
         configurable: true,
         enumerable: false,
         get() {
           return undefined;
         },
-        set(v) {
-          // שומרים כ-own property, כדי שהאובייקט יפסיק לעבור דרכנו
-          Object.defineProperty(this, prop, {
-            value: v,
-            writable: true,
-            configurable: true,
-            enumerable: true,
-          });
-          for (const e of list) {
-            try {
-              if (looksLike(this, e.marker)) e.onCapture(this);
-            } catch (err) {
-              NS.debug.lastError = String(err);
-            }
-          }
-        },
+        set: list.set,
       });
     } catch (e) {
       NS.debug.lastError = String(e);
     }
+  }
+
+  // מוריד סמן; שדה שהתרוקן יוצא מ-Object.prototype, אם עדיין שלנו
+  function disarm(prop, marker) {
+    const list = I.armed.get(prop);
+    if (!list) return;
+    const i = list.findIndex((e) => e.marker === marker);
+    if (i >= 0) list.splice(i, 1);
+    if (list.length) return;
+    I.armed.delete(prop);
+    const d = Object.getOwnPropertyDescriptor(W.Object.prototype, prop);
+    if (d && d.set === list.set) delete W.Object.prototype[prop];
   }
 
   NS.raw = function () {
@@ -161,32 +174,29 @@
     user: ['"User(', onUser],
   };
 
-  // שמות הבילד האחרון הידוע (f1de53fa) — נדרסים ע"י recon/detect.js
-  const SEED = {
-    battleUsers: 'wq4_1',
-    battleStatistics: 'lpw_1',
-    localBattleUserState: 'xq2_1',
-    user: 'kqi_1',
-  };
+  // אין שמות מראש: מפתח -> השדה שחומש עבורו, רק ממה שהגילוי שלח
+  const current = {};
 
-  function armAll(fields) {
+  const isField = (p) => typeof p === 'string' && /^[\w$]+_1$/.test(p);
+
+  // שם קודם שהוחלף (מטמון ישן) שייך כאן למחלקה זרה, אולי חמה
+  function apply(fields) {
     for (const key of Object.keys(MARKERS)) {
       const prop = fields[key];
-      if (typeof prop === 'string' && /^[\w$]+_1$/.test(prop)) {
-        armTrap(prop, MARKERS[key][0], MARKERS[key][1]);
-      }
+      if (!isField(prop) || prop === current[key]) continue;
+      armTrap(prop, MARKERS[key][0], MARKERS[key][1]);
+      if (current[key]) disarm(current[key], MARKERS[key][0]);
+      current[key] = prop;
     }
   }
 
-  armAll(SEED);
-
-  // השמות שהתגלו לבילד הרץ; שדה שכבר חמוש נשאר כמות שהוא
+  // השמות שהתגלו לבילד הרץ
   W.addEventListener('message', (e) => {
     if (e.source !== W) return;
     const m = e.data;
     if (!m || !m.__adv || m.dir !== 'i2m' || m.action !== 'advisorFields') return;
     if (!m.payload) return;
-    armAll(m.payload);
+    apply(m.payload);
     NS.debug.discovered = true;
   });
   W.postMessage({ __adv: true, dir: 'm2i', action: 'ready' }, '*');

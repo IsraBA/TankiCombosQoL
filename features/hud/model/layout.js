@@ -108,15 +108,20 @@
       x: { op: a.x.op, off: nx.off }, y: { op: a.y.op, off: ny.off } };
   }
 
+  // wf/hf: גודל שהוא שבר מהמסך, חלקי קנה המידה (יומן ההריגות)
+  const sizeOf = (fixed, frac, total, s) => (frac != null ? (frac * total) / s : fixed);
+
   // מתכון + גודל התצוגה -> התיבה הלוגית שהמשחק היה נותן
-  function compose(recipe, W, H) {
+  function compose(recipe, W, H, s) {
     const xf = X_OPS[recipe.x.op], yf = Y_OPS[recipe.y.op];
     if (!xf || !yf) return null;
+    const scale = s == null ? 1 : s;
+    const w = sizeOf(recipe.w, recipe.wf, W, scale), h = sizeOf(recipe.h, recipe.hf, H, scale);
     return {
-      x: xf(offsetOf(recipe.x, W), recipe.w, W),
-      y: yf(offsetOf(recipe.y, H), recipe.h, H),
-      w: recipe.w,
-      h: recipe.h,
+      x: xf(offsetOf(recipe.x, W), w, W),
+      y: yf(offsetOf(recipe.y, H), h, H),
+      w,
+      h,
     };
   }
 
@@ -130,7 +135,7 @@
   // מתכון -> מלבן בשברי מסך; pivot: מרכז סיבוב אחר
   function place(recipe, view) {
     const W = view.w, H = view.h, s = view.scale == null ? 1 : view.scale;
-    const box = compose(recipe, W, H);
+    const box = compose(recipe, W, H, s);
     if (!box) return null;
     const px = toPixels(box, recipe, s, W, H);
     if (!px) return null;

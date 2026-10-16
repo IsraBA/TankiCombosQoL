@@ -4,6 +4,10 @@ Move, resize and fade every element of the battle HUD, edited on a placeholder
 screen opened from the game's own Settings. Two independent sets of preferences,
 one per game layout.
 
+Minified names in this file (`o4o`, `z116`, `nut`…) are labels from the build a
+thing was researched on, kept so the research notes can be followed. The code
+never contains them: it reads every name out of the live bundle (`I.N`).
+
 ```
 features/hud/
 ├── model/                    pure — no chrome, no DOM, no game objects
@@ -26,11 +30,12 @@ features/hud/
 │   ├── abilities.js          #   overdrive and the nuclear ring
 │   ├── supplies.js           #   which slots, in what order, and where
 │   ├── texts.js              #   chat and battle status
+│   ├── killlog.js            #   the kill feed: its window area, through the DESKTOP config
 │   ├── assets.js             #   the SVG URLs and the rank image
 │   ├── compose.js            #   discover(src) -> names, offsets, a recipe per element per layout
-│   └── detect.js             #   fetch, cache per bundle URL, publish; names + offsets to MAIN
+│   └── detect.js             #   two jobs on shared/bundle.js: names + offsets to MAIN first, geometry last
 ├── capture/game/             [MAIN] hold the game's live HUD
-│   ├── names.js              #   the seed names + offset → role table; applyGame() swaps in the discovered ones
+│   ├── names.js              #   the names MAIN needs (no values until discovery) + role → element; applyGame()
 │   ├── trap.js               #   the Object.prototype trap + a tiny event bus
 │   ├── settings.js           #   BattleSettings + the hud service: layout & UI scale
 │   ├── root.js               #   the HUD root; records who added each element
@@ -147,19 +152,23 @@ fault.
 
 Two things change with every build: the **minified names** MAIN uses (`I.N`:
 trap fields, the rect accessors, the render and layout methods…) and the
-**offsets** of the add sites. `names.js` carries both for the latest known
-build as a seed; `discovery/` reads both out of the live bundle, caches them
-with the geometry (`hudRecipes:v<N>:<url>`), and `detect.js` posts them to MAIN
-as `hudGame`, again on MAIN's `ready`. `I.applyGame()` takes a names set only
-when it is **complete** — a partial one would mix two builds — and emits
-`game`: `root.js` and `settings.js` arm traps on the new fields, and every node
-already added gets its role again from the new table.
+**offsets** of the add sites. `names.js` carries neither — `I.N` lists the
+names MAIN needs with no value, and `I.offsets` is empty — so nothing is trapped
+and no node gets a role until discovery answers. `discovery/` reads both out of
+the live bundle, and `detect.js` runs it as **two jobs** on `shared/bundle.js`:
+`discoverGame()` (names + offsets, ~0.55 s on a cold cache, cached as
+`hudGame:v<N>:<url>`) first of all four features, and the geometry
+(`hudRecipes:v<N>:<url>`, reusing the names) last. It posts the names to MAIN as
+`hudGame`, again on MAIN's `ready`. `I.applyGame()` takes a names set only when
+it is **complete** — a partial one would mix two builds — and emits `game`:
+`root.js` and `settings.js` arm traps on the new fields (and drop the ones they
+replace), and every node already added gets its role again from the new table.
 
-The discovery block runs at `document_start`, like the combos and advisor
-ones: the BattleSettings trap must be armed before the game builds its
-settings. On the very first load of a new build the fetch and parse
-(~1.4 s) can still lose that race; from the second load the cache answers
-first.
+Why the names go first: the game builds `BattleSettings` while it boots (from
+local settings), so that trap has to be armed early. With a warm cache it always
+is; on the very first load of a new build the names arrive about half a second
+after the bundle download, which can miss it — the layout then reads as unknown
+until a battle setting changes or the page is reloaded.
 
 **Names (`engine.js`)** — each one from a structure, never from a name:
 
@@ -181,14 +190,26 @@ class names are strings):
 | element | rule |
 |---|---|
 | kill log, radar, chat | the added node comes from a lateinit accessor named `logHudElement` / `radarVisual` / `battleChatHudElement` |
-| bars, active effects, energy bar | the tank-HUD controller injects three components — `healthHudComponent`, `weaponStatusHudComponent`, `localStatusEffectHudComponent` — as `this.F=this.x().y(_$(C))`; every add site in a method of `C` |
+| bars, energy bar, active effects | the tank-HUD controller — the method that registers `callableName="provideDefaultTitlePosition"` — injects three components as `this.F=this.x().y(_$(C))`, always in this order: health, weapon status (the energy bar), local status effects. Every add site in a method of `C` |
 | overdrive | the method reads the lateinits `"point"` and `"shortcut"` before adding |
 | nuclear ring | the method builds `new <NuclearRechargeHudParams>(` |
 | supply row | built in a plain function, right after its `"Invalid supply type "` throw |
 | battle status | every `.<statusAdd>(` call outside a `statusAdd` method — one per game mode |
 
+**Lateinit names are the weakest of these anchors.** Until `8f7f4827` the
+three tank components were lateinit, so their property names sat in the bundle
+as strings (`vj("healthHudComponent")`), and that was the rule. `6a85fbcf`
+(Oct 2026) made them nullable (`var i=this.F;null==i||i.m(…)`), the strings
+vanished, and the bars and effects lost their roles without a single error.
+The injection order in the controller survived the change and holds on all 12
+builds. The kill log, radar, chat and overdrive rules still hang on lateinit
+names, and so does the kill log's geometry (`getActionLogAreaInWindowCoordinates`,
+`killlog.js`); if one of them goes the same way, look for a `callableName`, an
+enum name or a data-class string in the same method before reaching for code
+shape.
+
 **Verified** by `build/harnesses/test_hud_builds.js` on every bundle in
-`research/` (11 builds, Apr–Sep 2026): all names found, one add site per element
+`research/` (12 builds, Apr–Oct 2026): all names found, one add site per element
 and five for the status, and the same geometry in all of them. Two builds are
 also checked against live measurements — `7f05e212` (the developer's battle)
 and `f1de53fa` (the POC log) — to the offset. When a new build breaks it,
@@ -278,7 +299,7 @@ div.BattleHudComponentStyle-hudContainer      grid: "UserInfo Buttons" 10% / "Ba
 ├── div  grid-area:UserInfo; justify-self:start
 │   └── div.UserInfoContainerStyle-blockLeftPanel
 │       └── Uti — the same rank/nickname/XP component as the lobby header
-├── div  grid-area:BattleLog  (the canvas kill log reads its area from this)
+├── div  grid-area:BattleLog  (not where the canvas kill feed is placed — see "Coverage, honestly")
 ├── div.BattleChatComponentStyle-rootDesktop  (top 65%, left 1em, 40em×5em — the input line)
 └── div.BattleHudComponentStyle-buttonsContainer  grid-area:Buttons; justify-self:end
     └── div.-flexEndAlignStart
@@ -348,15 +369,15 @@ the screen**, not pixels. The same file therefore works at any resolution, and
 the editor (which runs at the browser's CSS pixel size) and the battle (which
 runs at the game's own screen units) agree without converting anything.
 
-The editor is opened **outside battle**, where no HUD exists to ask. Almost all
-of the geometry is therefore read out of the game's code (next section). What
-the code cannot give — the kill log, whose area comes from the HTML HUD — is
-measured instead: `capture/game/measure.js` records, during battle, what the
-game gave each element (its logical box, its anchors, the kind of scaling
-strategy, and the screen and UI scale it was measured on), and
-**`model/seed.js` ships one such record per layout** so the editor is right on
-its very first open. A real measurement from the player's own battle overrides
-the seed, per element; a discovered recipe overrides both.
+The editor is opened **outside battle**, where no HUD exists to ask. All of the
+canvas geometry is therefore read out of the game's code (next section). The
+measurement is the fallback for when that reading fails:
+`capture/game/measure.js` records, during battle, what the game gave each
+element (its logical box, its anchors, the kind of scaling strategy, and the
+screen and UI scale it was measured on), and **`model/seed.js` ships one such
+record per layout** so the editor still shows something if discovery breaks on
+a new build. A real measurement from the player's own battle overrides the seed,
+per element; a discovered recipe overrides both.
 
 > **Refreshing the seed**: in a battle, `__HUD.seed()` prints the current
 > measurement as a line ready to paste into `model/seed.js`. Do it once per
@@ -364,11 +385,10 @@ the seed, per element; a discovered recipe overrides both.
 
 ## Geometry from the game's own code (`discovery/`)
 
-The seed is the fallback. The real source is the bundle: **every canvas element
-the editor exposes is placed from literal numbers in the game's code** — all but
-the two whose size is decided by the text inside them (kill log, battle status)
-— and `discovery/` reads them, so the editor is right without anyone
-ever entering a battle.
+The geometry seed is the fallback. The real source is the bundle: **every canvas element
+the editor exposes is placed from literal numbers in the game's code** — the
+battle status's width aside, which is the text it shows — and `discovery/` reads
+them, so the editor is right without anyone ever entering a battle.
 
 The whole battle-HUD layout reduces to one x-op and one y-op plus an offset:
 
@@ -382,7 +402,11 @@ and then one of four scaling strategies turns that logical box into pixels.
 strategy is in `../../../research/CLAUDE.md` → "Battle HUD layout".
 
 A discovered recipe is therefore `{k, a:[ax,ay], w, h, x:{op,off}, y:{op,off}}`
-per layout. The radar's, read straight out of the bundle:
+per layout. Two elements need more: the chat's offset is a fraction of the screen
+(`frac` on the axis), and the kill log's size is too — `wf`/`hf` replace `w`/`h`
+and mean that fraction of the screen divided by the UI scale.
+
+The radar's, read straight out of the bundle:
 
 ```
 default  : ry (0,0)  150×150   x left 24     y top 100
@@ -455,7 +479,7 @@ slider curve (0→0.75, 50→1, 100→1.5) and `battleUISize` comes from the tra
 | supplies | **the bundle** — right slot row, six slots | x, width and top edge exact |
 | chat | **the bundle** — 480×184, and the only element whose offset is a *fraction* of the screen (`18/1920` across, bottom edge at `.65`) rather than a constant. The axis ops in `layout.js` take an optional `frac` for it. Joined by the HTML input line under it. Its opacity goes through `chat_alpha.js` (see the catalogue) | — |
 | status | **the bundle, one text width excepted.** The timer is centred at `y = 16` in a `24` font; each score plate is the `62×24` image (the `100×24` one beside it is shown only in CTF) twelve pixels from the timer. The timer's own width is text (`"00:00"`), so it is taken as five glyphs of the font height — `268×24` in all: plate, timer, plate, one row. The `200×20` rect under the timer is a hit area, never drawn, and is not in the box | — |
-| kill log | **the seed, permanently.** Its `o4o` takes its area from the HTML HUD container, not from literals, so there is nothing to read outside battle. The rows are right-aligned text inside that area, so its left 40% is never drawn: `inset: {left: .4}` in the catalogue, applied by `HudElements.visibleBox` in the editor's rects *and* in MAIN's live pivot, so both turn about the same point | exact — `fit` now solves the anchor out of the record |
+| kill log | **the bundle** (`killlog.js`). Its layout asks a lambda for its area in *window* coordinates (the lateinit `getActionLogAreaInWindowCoordinates`); the DESKTOP battle config hands it a helper that returns fixed fractions of the window — **x .7–.98, y .2–.5**, the same in all 12 builds (the MOBILE helper has its own). The node is that area divided by the UI scale and right-aligned to it, on `ey` anchored `(1, 0)`, so in pixels it is exactly the area at any scale: the recipe carries the size as `wf/hf`, a fraction of the screen over the scale. The rows are right-aligned text inside it, so its left 40% is never drawn: `inset: {left: .4}` in the catalogue, applied by `HudElements.visibleBox` | exact: logical box and pixel rect (`1304.8, 183.2, 521.92×274.8`) |
 
 Two traps, both of which shipped wrong once and are worth remembering:
 
@@ -475,7 +499,9 @@ out of the record**: the recorded `l` and `px` pin down an affine map, and the
 anchor that produces it is recovered per kind, keeping the first whose anchor
 lands in range. The kill log was recorded as `letterbox`; solving says `linear`
 with anchors `(0.98, 0.20)`, and only then does the replay reproduce the
-measurement to the pixel. The harness asserts exactly that.
+measurement to the pixel. The harness asserts exactly that. (Its real strategy,
+read from the bundle since, is `ey (1, 0)` — the same affine map at the scale it
+was measured on; the recipe now supersedes the measurement anyway.)
 
 Adding an element is now filling in a table, not design work: decode its `o4o`
 into an x-op and a y-op (most are done in the research doc), add an extractor
@@ -491,9 +517,11 @@ because a minified name is reused across modules and **the right definition is
 the one nearest the call site** — the first `indexOf` is usually a different
 module's.
 
-> **Bump `CACHE_VERSION` in `discovery/detect.js` whenever `discover()`'s output
-> shape changes** — same trap as the combos discovery, where a stale cache
-> silently overrode a richer seed.
+> **Bump `CACHE_VERSION` in `discovery/detect.js` (with `V` in `compose.js`)
+> whenever `discover()`'s output shape changes** — an entry of an older shape is
+> posted to MAIN first and every field it lacks reads empty until the background
+> refresh replaces it. Values alone need no bump: `shared/bundle.js` rediscovers
+> whatever an older extension version cached.
 
 `model/replay.js` replays that record onto the current screen:
 
@@ -504,9 +532,9 @@ module's.
   (`BATTLE_UI_SCALE`, remapped 0→0.75, 50→1, 100→1.5 — the game's own curve)
   and by any change in the root font size.
 
-So the editor shows the real geometry at the player's current resolution and UI
-scale, and our own scale composes with the game's instead of fighting it: 100%
-means "whatever the game would have drawn".
+So even the fallback shows the geometry at the player's current resolution and
+UI scale, and our own scale composes with the game's instead of fighting it:
+100% means "whatever the game would have drawn".
 
 Records are stored **per layout** and merged per element, so an element that
 happened to be hidden during one measurement keeps the rect it had.
@@ -611,11 +639,12 @@ background the game uses.
   growing them threw them across the screen. Pivots are re-sent on every
   discovery result, storage change, state change and window resize.
 
-  Only elements **with a recipe** get a pivot this way. One reconstructed from a
-  measurement (the kill log) turns about its live box in MAIN instead: the
-  measurement *is* that box, and the live one cannot go stale, whereas a pivot
-  fitted from an old record left the kill log misplaced after a fullscreen
-  toggle until the window was jiggled.
+  Only elements **with a recipe** get a pivot this way — today every canvas
+  element. One reconstructed from a measurement (only when discovery failed)
+  turns about its live box in MAIN instead: the measurement *is* that box, and
+  the live one cannot go stale, whereas a pivot fitted from an old record once
+  left the kill log misplaced after a fullscreen toggle until the window was
+  jiggled.
 
   **The exception is an element that rides the tank** — the bars in the centered
   layout. A fixed screen pivot turns a scale into a translation as soon as the
@@ -697,9 +726,9 @@ default is deleted rather than stored.
 - An element the current layout cannot move must not be given an offset, even
   if one was saved while the other layout was active.
 - Only overlap refuses a gesture; the screen edge clamps.
-- No minified name is written into a MAIN file except the seed in `names.js`;
-  every other file reads `I.N` at call time, and `I.applyGame` replaces the
-  names only as a complete set.
+- No minified name is written into any file (`test_no_names.js` checks it);
+  every file reads `I.N` at call time, and `I.applyGame` replaces the names only
+  as a complete set.
 - Nothing we add to the page carries a game class name of the battle HUD —
   other extensions key on them (see "The HTML elements").
 

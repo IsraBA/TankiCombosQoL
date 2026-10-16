@@ -45,11 +45,13 @@ for (const f of FILES) {
     filename: f.split("/").pop(),
   });
 }
+// לתוסף אין שמות מראש: מה שהגילוי מוצא בבאנדל החדש ביותר
+vm.runInContext("__CMB.internals.applyNames(" + JSON.stringify(require("./game_names").garage()) + ")", ctx);
 
 // --- בונים מצב-משחק מזויף בתוך ה-sandbox (חייב להיווצר שם, כדי שה-trap יירה) ---
 const setup = `
 (function () {
-  const S = __CMB.names();          // שמות ה-SEED
+  const S = __CMB.names();          // השמות מהגילוי
   const SF = S.stateFields, IF = S.itemFields;
 
   const dispatched = [];

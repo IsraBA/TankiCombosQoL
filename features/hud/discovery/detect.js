@@ -1,57 +1,17 @@
 // features/hud/discovery/detect.js  [ISOLATED world]
 
-// מריץ את הגילוי על הבאנדל החי ושומר במטמון לפי כתובתו, כמו שאר הגילויים.
+// הגילוי על הבאנדל החי (דרך shared/bundle.js): השמות ל-MAIN ראשונים, הגיאומטריה אחריהם.
 (function () {
   "use strict";
 
   window.TankiQoL = window.TankiQoL || {};
 
-  const BUNDLE_URL_RE = /\/main\.[A-Za-z0-9]+\.js(?:[?#]|$)/;
-
   // **להעלות בכל שינוי בפלט של discover()**, עם V ב-compose.js
-  const CACHE_VERSION = 12;
-  const CACHE_PREFIX = "hudRecipes:v" + CACHE_VERSION + ":";
+  const CACHE_VERSION = 15;
 
   const listeners = [];
   let recipes = null;
-
-  function findBundleUrl() {
-    for (const s of document.scripts) {
-      if (s.src && BUNDLE_URL_RE.test(s.src)) return s.src;
-    }
-    return null;
-  }
-
-  function waitForBundleUrl(timeoutMs) {
-    return new Promise((resolve, reject) => {
-      const initial = findBundleUrl();
-      if (initial) return resolve(initial);
-      const observer = new MutationObserver(() => {
-        const url = findBundleUrl();
-        if (url) {
-          observer.disconnect();
-          clearTimeout(timer);
-          resolve(url);
-        }
-      });
-      observer.observe(document.documentElement || document, { childList: true, subtree: true });
-      const timer = setTimeout(() => {
-        observer.disconnect();
-        reject(new Error("bundle URL not found"));
-      }, timeoutMs);
-    });
-  }
-
-  function cleanupStaleCaches() {
-    try {
-      chrome.storage.local.get(null, (all) => {
-        const stale = Object.keys(all).filter(
-          (k) => k.startsWith("hudRecipes:") && !k.startsWith(CACHE_PREFIX)
-        );
-        if (stale.length) chrome.storage.local.remove(stale);
-      });
-    } catch (e) { /* ניקוי הוא best-effort */ }
-  }
+  let first = null;   // {names, game}: מה שהגיאומטריה בונה עליו
 
   // נתיב יחסי -> מלא: מה שלפני static/, כמו publicPath
   function absolute(found, bundleUrl) {
@@ -66,8 +26,8 @@
 
   // השמות ומיפוי הרכיבים ל-MAIN; נשלחים שוב כשהוא מכריז ready
   function sendGame() {
-    if (recipes && recipes.game) {
-      window.postMessage({ __hud: true, dir: "i2m", action: "hudGame", payload: recipes.game }, "*");
+    if (first && first.game) {
+      window.postMessage({ __hud: true, dir: "i2m", action: "hudGame", payload: first.game }, "*");
     }
   }
   window.addEventListener("message", (e) => {
@@ -75,49 +35,33 @@
     if (m && m.__hud && m.dir === "m2i" && m.action === "ready") sendGame();
   });
 
-  function publish(found) {
-    recipes = found;
-    sendGame();
-    for (const fn of listeners) {
-      try {
-        fn(found);
-      } catch (e) { /* מאזין אחד לא מפיל את השאר */ }
-    }
-  }
+  // BattleSettings נבנה כבר בעליית המשחק: ראשון בתור
+  window.TankiQoL.Bundle.register({
+    name: "hudGame",
+    version: CACHE_VERSION,
+    priority: 0,
+    discover: (src) => window.TankiQoL.HudDiscover.discoverGame(src),
+    publish(found) {
+      first = found;
+      sendGame();
+    },
+  });
 
-  (async function run() {
-    cleanupStaleCaches();
-
-    let url;
-    try {
-      url = await waitForBundleUrl(30000);
-    } catch (e) {
-      return;
-    }
-    const key = CACHE_PREFIX + url;
-
-    const cached = await new Promise((resolve) => {
-      try {
-        chrome.storage.local.get([key], (got) => resolve(got[key] || null));
-      } catch (e) {
-        resolve(null);
+  // הגיאומטריה נדרשת רק לעורך: אחרונה
+  window.TankiQoL.Bundle.register({
+    name: "hudRecipes",
+    version: CACHE_VERSION,
+    priority: 4,
+    discover: (src, url) => absolute(window.TankiQoL.HudDiscover.discover(src, first), url),
+    publish(found) {
+      recipes = found;
+      for (const fn of listeners) {
+        try {
+          fn(found);
+        } catch (e) { /* מאזין אחד לא מפיל את השאר */ }
       }
-    });
-    if (cached) return publish(cached);
-
-    try {
-      const res = await fetch(url, { credentials: "omit" });
-      if (!res.ok) throw new Error("HTTP " + res.status);
-      const found = absolute(window.TankiQoL.HudDiscover.discover(await res.text()), url);
-      if (!found) return;
-      try {
-        chrome.storage.local.set({ [key]: found });
-      } catch (e) { /* נשאר בזיכרון לסשן הזה */ }
-      publish(found);
-    } catch (e) {
-      console.error("[hud] detect: fetch/parse failed:", e);
-    }
-  })();
+    },
+  });
 
   window.TankiQoL.HudRecipes = {
     get() {

@@ -80,16 +80,15 @@
     I.emit("root", o);
   }
 
-  // שם חדש מהגילוי: מלכודת חדשה, ותפקידים מחדש למה שכבר נוסף
+  // שמות מהגילוי: מלכודת על השדה, ותפקידים מחדש למה שכבר נוסף
   let armedTrap = null;
-  function arm() {
-    if (armedTrap === N.rootTrap) return;
-    armedTrap = N.rootTrap;
-    I.armTrap(N.rootTrap, looksLikeRoot, onRoot);
-  }
-  arm();
   I.on("game", () => {
-    arm();
+    if (N.rootTrap && armedTrap !== N.rootTrap) {
+      // שם קודם (מטמון ישן) שייך בבילד הזה למחלקה זרה
+      if (armedTrap) I.disarmTrap(armedTrap, looksLikeRoot);
+      armedTrap = N.rootTrap;
+      I.armTrap(N.rootTrap, looksLikeRoot, onRoot);
+    }
     for (const e of I.topNodes) e.role = e.offset != null ? I.offsets[e.offset] || null : null;
     I.rootGen++;
   });

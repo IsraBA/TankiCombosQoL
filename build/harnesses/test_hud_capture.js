@@ -39,53 +39,66 @@ function near(label, got, want, eps) {
 
 // ---- מנוע מזויף בצורת המנוע האמיתי ----
 // SceneNode מחזיק את ה-alpha ואת המעבר על העץ; DisplayNode מוסיף מלבן
-// ואת s4o — בדיוק ההפרדה ש-transform.js נשען עליה כשהוא מצל את o3k.
+// ואת toPixels — בדיוק ההפרדה ש-transform.js נשען עליה כשהוא מצל את alpha.
+// @שם@ = השם מה-seed: רענון ה-seed לא שובר את המנוע המזויף.
+// שמות שהמנוע לא חושף (__kids, __addKid) לא יתנגשו בשם ממוזער.
 const ENGINE = `
-function SceneNode(){ this.o35_1=null; this.p35_1=[]; this._v=true; this._a=1; }
-SceneNode.prototype.k3l=function(fn){ fn(this); for(var i=0;i<this.p35_1.length;i++) this.p35_1[i].k3l(fn); };
-SceneNode.prototype.k3k=function(){ return this._v; };
-SceneNode.prototype.o3k=function(){ return this._a; };
-SceneNode.prototype.t3k=function(c){ c.o35_1=this; this.p35_1.push(c); return c; };
+function SceneNode(){ this.@parent@=null; this.__kids=[]; this._v=true; this._a=1; }
+SceneNode.prototype.@traverse@=function(fn){ fn(this); for(var i=0;i<this.__kids.length;i++) this.__kids[i].@traverse@(fn); };
+SceneNode.prototype.@visible@=function(){ return this._v; };
+SceneNode.prototype.@alpha@=function(){ return this._a; };
+SceneNode.prototype.__addKid=function(c){ c.@parent@=this; this.__kids.push(c); return c; };
 function Rect(x,y,w,h){ this._x=x; this._y=y; this._w=w; this._h=h; }
-Rect.prototype.c4d=function(){return this._x}; Rect.prototype.d4d=function(){return this._y};
-Rect.prototype.h29=function(){return this._w}; Rect.prototype.g29=function(){return this._h};
-Rect.prototype.q4o=function(v){this._x=v}; Rect.prototype.r4o=function(v){this._y=v};
-Rect.prototype.u29=function(v){this._w=v}; Rect.prototype.v29=function(v){this._h=v};
-function Strategy(s){ this.h1es_1=s; }
-Strategy.prototype.h4r=function(screen,node,out){
-  var s=this.h1es_1;
-  out.q4o((1-s)*screen.h29()*(node.k4m_1||0)+s*node.c4d());
-  out.r4o((1-s)*screen.g29()*(node.l4m_1||0)+s*node.d4d());
-  out.u29(s*node.h29()); out.v29(s*node.g29());
+Rect.prototype.@x@=function(){return this._x}; Rect.prototype.@y@=function(){return this._y};
+Rect.prototype.@w@=function(){return this._w}; Rect.prototype.@h@=function(){return this._h};
+Rect.prototype.@setX@=function(v){this._x=v}; Rect.prototype.@setY@=function(v){this._y=v};
+Rect.prototype.@setW@=function(v){this._w=v}; Rect.prototype.@setH@=function(v){this._h=v};
+function Strategy(s){ this.@scaleFactor@=s; }
+Strategy.prototype.@strategyApply@=function(screen,node,out){
+  var s=this.@scaleFactor@;
+  out.@setX@((1-s)*screen.@w@()*(node.@anchorX@||0)+s*node.@x@());
+  out.@setY@((1-s)*screen.@h@()*(node.@anchorY@||0)+s*node.@y@());
+  out.@setW@(s*node.@w@()); out.@setH@(s*node.@h@());
 };
 function DisplayNode(x,y,w,h){ SceneNode.call(this); this._x=x; this._y=y; this._w=w; this._h=h;
-  this.m4m_1=globalThis.STRATEGY; this.k4m_1=0; this.l4m_1=0; }
+  this.@strategy@=globalThis.STRATEGY; this.@anchorX@=0; this.@anchorY@=0; }
 DisplayNode.prototype=Object.create(SceneNode.prototype);
-DisplayNode.prototype.c4d=function(){return this._x}; DisplayNode.prototype.d4d=function(){return this._y};
-DisplayNode.prototype.h29=function(){return this._w}; DisplayNode.prototype.g29=function(){return this._h};
-DisplayNode.prototype.q4o=function(v){this._x=v}; DisplayNode.prototype.r4o=function(v){this._y=v};
-DisplayNode.prototype.u29=function(v){this._w=v}; DisplayNode.prototype.v29=function(v){this._h=v};
-DisplayNode.prototype.s4o=function(screen,out){ this.m4m_1.h4r(screen,this,out); };
-DisplayNode.prototype.o4o=function(view,screen){};
+DisplayNode.prototype.@x@=function(){return this._x}; DisplayNode.prototype.@y@=function(){return this._y};
+DisplayNode.prototype.@w@=function(){return this._w}; DisplayNode.prototype.@h@=function(){return this._h};
+DisplayNode.prototype.@setX@=function(v){this._x=v}; DisplayNode.prototype.@setY@=function(v){this._y=v};
+DisplayNode.prototype.@setW@=function(v){this._w=v}; DisplayNode.prototype.@setH@=function(v){this._h=v};
+DisplayNode.prototype.@toPixels@=function(screen,out){ this.@strategy@.@strategyApply@(screen,this,out); };
+DisplayNode.prototype.@layout@=function(view,screen){};
 function SupplyRow(x,y,w,h){ DisplayNode.call(this,x,y,w,h); }
 SupplyRow.prototype=Object.create(DisplayNode.prototype);
-SupplyRow.prototype.o4o=function(view,screen){ for(var i=0;i<this.p35_1.length;i++) this.p35_1[i].s4o(screen,globalThis.SCRATCH); };
-function HudRoot(){ this.n11h_1=new DisplayNode(0,0,1,1); this.z116=function(n){ this.n11h_1.t3k(n); };
-  this.a117=function(n){ var a=this.n11h_1.p35_1; var i=a.indexOf(n); if(i>=0) a.splice(i,1); };
-  this.o11h_1=1; }
+SupplyRow.prototype.@layout@=function(view,screen){ for(var i=0;i<this.__kids.length;i++) this.__kids[i].@toPixels@(screen,globalThis.SCRATCH); };
+function HudRoot(){ this.@rootContainer@=new DisplayNode(0,0,1,1); this.@rootAdd@=function(n){ this.@rootContainer@.__addKid(n); };
+  this.@rootRemove@=function(n){ var a=this.@rootContainer@.__kids; var i=a.indexOf(n); if(i>=0) a.splice(i,1); };
+  this.@rootTrap@=1; }
 globalThis.SceneNode=SceneNode; globalThis.DisplayNode=DisplayNode; globalThis.SupplyRow=SupplyRow;
 globalThis.Rect=Rect; globalThis.Strategy=Strategy; globalThis.HudRoot=HudRoot;
-function BattleSettings(centered,size){ this.ssi_1=centered; this.tsi_1=size; this.wsi_1=true; }
-BattleSettings.prototype.toString=function(){ return "BattleSettings(showAimHelperDot="+this.x+", isCenteredLayout="+this.ssi_1+", battleUISize="+this.tsi_1+", autoSupply="+this.wsi_1+")"; };
-function HudService(s){ this.sz5_1=s; this.tz5_1=1; }
-HudService.prototype.uz5=function(v){this.sz5_1=v}; HudService.prototype.vz5=function(){return this.sz5_1};
-HudService.prototype.q119=function(){ return globalThis.STRATEGY; };
+function BattleSettings(centered,size){ this.centered_1=centered; this.size_1=size; this.@settingsTrap@=true; }
+BattleSettings.prototype.toString=function(){ return "BattleSettings(showAimHelperDot="+this.x+", isCenteredLayout="+this.centered_1+", battleUISize="+this.size_1+", autoSupply="+this.@settingsTrap@+")"; };
+function HudService(s){ this.@serviceScale@=s; this.@serviceTrap@=1; }
+HudService.prototype.@serviceMethods.0@=function(v){this.@serviceScale@=v}; HudService.prototype.@serviceMethods.1@=function(){return this.@serviceScale@};
+HudService.prototype.@serviceMethods.2@=function(){ return globalThis.STRATEGY; };
 globalThis.BattleSettings=BattleSettings; globalThis.HudService=HudService;
 `;
 
 // שורה אחת בדיוק: כל פונקציה מקבלת עמודה משלה, כמו פונקציות בבאנדל
 const ADDERS =
-  "globalThis.ADD={status:function(h,n){h.z116(n)},killLog:function(h,n){h.z116(n)},radar:function(h,n){h.z116(n)},overdrive:function(h,n){h.z116(n)},supplyRow:function(h,n){h.z116(n)},hp:function(h,n){h.z116(n)},fx:function(h,n){h.z116(n)}};";
+  "globalThis.ADD={status:function(h,n){h.@rootAdd@(n)},killLog:function(h,n){h.@rootAdd@(n)},radar:function(h,n){h.@rootAdd@(n)},overdrive:function(h,n){h.@rootAdd@(n)},supplyRow:function(h,n){h.@rootAdd@(n)},hp:function(h,n){h.@rootAdd@(n)},fx:function(h,n){h.@rootAdd@(n)}};";
+
+// לתוסף אין שמות מראש: מה שהגילוי מוצא בבאנדל החדש ביותר
+const GAME = require("./game_names").hud();
+const N = GAME.names;
+function fill(src) {
+  return src.replace(/@([\w.]+)@/g, (_, key) => {
+    const v = key.split(".").reduce((o, k) => (o == null ? undefined : o[k]), N);
+    if (typeof v !== "string") throw new Error("no discovered name " + key);
+    return v;
+  });
+}
 
 function makeCtx() {
   const timeouts = [];
@@ -114,14 +127,25 @@ function makeCtx() {
 
   vm.createContext(ctx);
   vm.runInContext("globalThis.window = globalThis; window.TankiQoL = window.TankiQoL || {};", ctx);
+  const protoNames = () => vm.runInContext("Object.getOwnPropertyNames(Object.prototype).join()", ctx);
+  const protoBefore = protoNames();
   for (const f of FILES) {
     vm.runInContext(fs.readFileSync(path.join(EXT, f), "utf8"), ctx, { filename: f });
   }
-  vm.runInContext(ENGINE, ctx, { filename: "engine.js" });
-  vm.runInContext(ADDERS, ctx, { filename: "adders.js" });
+  // לפני הגילוי: כלום לא ידוע וכלום לא חמוש
+  const I0 = ctx.window.__HUD.internals;
+  const early = {
+    names: Object.keys(I0.N).every((k) => I0.N[k] === null) && ctx.window.__HUD.debug.names === null,
+    traps: protoNames() === protoBefore,
+  };
+  // השמות מגיעים דרך הגשר, כמו מ-detect.js
+  ctx.postMessage({ __hud: true, dir: "i2m", action: "hudGame", payload: { names: N } });
+  vm.runInContext(fill(ENGINE), ctx, { filename: "engine.js" });
+  vm.runInContext(fill(ADDERS), ctx, { filename: "adders.js" });
 
   return {
     ctx,
+    early,
     posted,
     NS: ctx.window.__HUD,
     I: ctx.window.__HUD.internals,
@@ -146,12 +170,15 @@ const G = ctx;   // ה-global של ההקשר הוא ארגז החול עצמו
 vm.runInContext("globalThis.STRATEGY = new Strategy(1); globalThis.SCRATCH = new Rect(0,0,1,1);", ctx);
 vm.runInContext("globalThis.SCREEN = new Rect(0,0,1920,950);", ctx);
 
+ok("no names before discovery — nothing is hardcoded", env.early.names);
+ok("…and no trap on Object.prototype until they arrive", env.early.traps);
+ok("the discovered names were taken whole", NS.debug.names === "bundle" && I.N.rootTrap === N.rootTrap);
 ok("nothing is captured before the game builds anything", I.root === null);
 
 vm.runInContext("globalThis.SETTINGS = new BattleSettings(false, 50);", ctx);
 ok("the BattleSettings trap fired", NS.debug.settingsCaptures === 1);
 ok("…and its field names were read out of its own toString",
-  I.settingsFields.isCenteredLayout === "ssi_1" && I.settingsFields.battleUISize === "tsi_1");
+  I.settingsFields.isCenteredLayout === "centered_1" && I.settingsFields.battleUISize === "size_1");
 ok("…so the layout is known outside battle", I.layout() === "default");
 ok("…along with the game's UI-scale slider", I.uiSize() === 50);
 
@@ -164,7 +191,7 @@ ok("the hud service is captured too", I.uiScale() === 1.25);
 
 vm.runInContext("globalThis.HUD = new HudRoot();", ctx);
 ok("the HUD root trap fired on the last field its ctor writes", NS.debug.captures === 1);
-ok("…and the children container came with it", I.container === G.HUD.n11h_1);
+ok("…and the children container came with it", I.container === G.HUD[N.rootContainer]);
 
 // ---- הוספת רכיבים: כל מוסיף מזוהה ב-offset משלו ----
 
@@ -176,7 +203,7 @@ globalThis.HP = new DisplayNode(780,839,304,10);
 globalThis.ROW = new SupplyRow(0,0,1868,926);
 globalThis.SLOT_L = new DisplayNode(162,814,44,44);
 globalThis.SLOT_R = new DisplayNode(1697,814,44,44);
-ROW.t3k(SLOT_L); ROW.t3k(SLOT_R);
+ROW.__addKid(SLOT_L); ROW.__addKid(SLOT_R);
 globalThis.S1 = new DisplayNode(823,19,62,24);
 globalThis.S2 = new DisplayNode(978,19,62,24);
 ADD.radar(HUD, RADAR); ADD.killLog(HUD, LOG); ADD.overdrive(HUD, OVER);
@@ -210,8 +237,8 @@ ok("elements added before the table arrived get their role from it",
 
 function draw(node) {
   const out = new G.Rect(0, 0, 1, 1);
-  node.s4o(G.SCREEN, out);
-  return { x: out.c4d(), y: out.d4d(), w: out.h29(), h: out.g29() };
+  node[N.toPixels](G.SCREEN, out);
+  return { x: out[N.x](), y: out[N.y](), w: out[N.w](), h: out[N.h]() };
 }
 
 draw(G.RADAR);
@@ -242,8 +269,8 @@ near("an offset of 0.1 screen widths moves the radar by exactly that", moved.x -
 near("…scaling doubles its size", moved.w, 300);
 near("…about its own centre, so the centre only moved by the offset",
   moved.x + moved.w / 2, before.x + before.w / 2 + 0.1 * 1920);
-near("opacity multiplies the node's own alpha", G.RADAR.o3k(), 0.5);
-near("…and leaves an untouched element alone", G.LOG.o3k(), 1);
+near("opacity multiplies the node's own alpha", G.RADAR[N.alpha](), 0.5);
+near("…and leaves an untouched element alone", G.LOG[N.alpha](), 1);
 
 const other = draw(G.LOG);
 near("an element with no preference is drawn exactly as the game drew it", other.x, 1210);
@@ -260,15 +287,15 @@ vm.runInContext("globalThis.SETTINGS4 = new BattleSettings(true, 50);", ctx);
 I.markLayoutChanged();
 I.applySettings({ layouts: { centered: { elements: { bars: { dx: 0.3, dy: 0, scale: 1.5, opacity: 0.4 } } } } });
 env.tick();
-// בממורכזת המשחק מציב בכל פריים את העוגן של כל פס על נקודת הטנק (l12h),
+// בממורכזת המשחק מציב בכל פריים את העוגן של כל פס על נקודת הטנק,
 // וחלק נוסף של הקבוצה — כאן פס שני — יושב מתחת לראשון
-vm.runInContext("HP.k4m_1 = 932; HP.l4m_1 = 870; globalThis.EN = new DisplayNode(780, 855, 304, 8); HP.t3k(EN);", ctx);
+vm.runInContext(fill("HP.@anchorX@ = 932; HP.@anchorY@ = 870; globalThis.EN = new DisplayNode(780, 855, 304, 8); HP.__addKid(EN);"), ctx);
 bars = draw(G.HP);
 near("in the centered layout they ride the tank, so the offset is refused: it grows about the tank point",
   bars.x, 932 + (780 - 932) * 1.5);
 near("…vertically too", bars.y, 870 + (839 - 870) * 1.5);
 near("…but the size still applies", bars.w, 304 * 1.5);
-near("…and so does the opacity", G.HP.o3k(), 0.4);
+near("…and so does the opacity", G.HP[N.alpha](), 0.4);
 // כולם סביב אותה נקודה: הרווחים גדלים באותו יחס כמו הפסים
 let en = draw(G.EN);
 near("the gap to the next part grows by the same factor as the parts",
@@ -276,7 +303,7 @@ near("the gap to the next part grows by the same factor as the parts",
 
 // הטנק נוסע: הפסים והעוגן זזים איתו, וההגדלה נשארת סביב הנקודה החיה —
 // נקודה קבועה על המסך הייתה הופכת כל צעד של הטנק להזזה
-vm.runInContext("HP._x = 1200; HP._y = 300; EN._x = 1200; EN._y = 316; HP.k4m_1 = 1352; HP.l4m_1 = 331;", ctx);
+vm.runInContext(fill("HP._x = 1200; HP._y = 300; EN._x = 1200; EN._y = 316; HP.@anchorX@ = 1352; HP.@anchorY@ = 331;"), ctx);
 env.tick();
 bars = draw(G.HP);
 en = draw(G.EN);
@@ -290,7 +317,7 @@ near("…and the gap is still the scaled one", en.y - (bars.y + bars.h), (316 - 
 vm.runInContext(`
 globalThis.FX = new DisplayNode(0,0,1,1);
 globalThis.FX_UP = new DisplayNode(1337,262,30,30); globalThis.FX_DOWN = new DisplayNode(1337,339,30,30);
-FX.t3k(FX_UP); FX.t3k(FX_DOWN); ADD.fx(HUD, FX);
+FX.__addKid(FX_UP); FX.__addKid(FX_DOWN); ADD.fx(HUD, FX);
 `, ctx, { filename: "effects.js" });
 const fxEntry = I.topNodes.find((e) => e.node === G.FX);
 I.applyGame({ offsets: Object.assign({}, I.offsets, { [fxEntry.offset]: "activeSupplies" }) });
@@ -312,9 +339,9 @@ up = draw(G.FX_UP);
 near("growing the effects as well grows the row away from the bars, never onto them",
   bars.y - (up.y + up.h), 2 * (300 - (262 + 30)));
 near("…at their own scale", up.w, 60);
-vm.runInContext("HUD.a117(FX);", ctx);
+vm.runInContext(fill("HUD.@rootRemove@(FX);"), ctx);
 I.markLayoutChanged();
-vm.runInContext("HP._x = 780; HP._y = 848; HP.p35_1.length = 0;", ctx);
+vm.runInContext("HP._x = 780; HP._y = 848; HP.__kids.length = 0;", ctx);
 
 // ---- פריסה מחדש של המשחק אינה ציור ----
 
@@ -323,10 +350,10 @@ I.markLayoutChanged();
 I.applySettings({ layouts: { default: { elements: { supplies: { dx: 0.25, dy: 0, scale: 1, opacity: 1 } } } } });
 env.tick();
 const insideLayout = (() => {
-  G.ROW.o4o(G.SCREEN, G.SCREEN);           // הרכיב פורס את ילדיו
-  return { x: G.SCRATCH.c4d() };
+  G.ROW[N.layout](G.SCREEN, G.SCREEN);     // הרכיב פורס את ילדיו
+  return { x: G.SCRATCH[N.x]() };
 })();
-near("s4o called inside a layout pass stays the game's own number", insideLayout.x, 1697);
+near("a draw inside a layout pass stays the game's own number", insideLayout.x, 1697);
 const drawn = draw(G.SLOT_R);
 near("…while the same node drawn normally is moved", drawn.x - 1697, 0.25 * 1920);
 ok("the layout pass was counted, not transformed", NS.debug.layoutCalls > 0);
@@ -350,7 +377,7 @@ ok("the status element's box spans both of its leaves",
 // לא מצויר, ואם ייכנס לתיבה — היא תתחיל ב-(0,0) ומרכז הסיבוב יזוז לפינה.
 // זה בדיוק מה שהעיף את הפסים בפריסה הממורכזת בכל הגדלה.
 vm.runInContext(`
-globalThis.EMPTY_BOX = new DisplayNode(0,0,1,1); __HUD.internals.groupMembers("radar")[0].t3k(EMPTY_BOX);
+globalThis.EMPTY_BOX = new DisplayNode(0,0,1,1); __HUD.internals.groupMembers("radar")[0].__addKid(EMPTY_BOX);
 `, ctx, { filename: "empty.js" });
 I.markLayoutChanged();
 env.flush();
@@ -360,7 +387,7 @@ ok("an unsized 1x1 container at the origin does not widen the group box",
 
 // ילד מוסתר (טולטיפ, חריץ ריק) לא מנפח את התיבה של הרכיב
 vm.runInContext(`
-globalThis.TIP = new DisplayNode(1475,200,88,239); TIP._v = false; SLOT_R.t3k(TIP);
+globalThis.TIP = new DisplayNode(1475,200,88,239); TIP._v = false; SLOT_R.__addKid(TIP);
 `, ctx, { filename: "tip.js" });
 I.markLayoutChanged();
 const rec2 = NS.measure();
@@ -388,30 +415,35 @@ ok("…and says a battle is on", state.payload.inBattle === true);
 
 // ---- הסרה ----
 
-vm.runInContext("HUD.a117(RADAR);", ctx);
+vm.runInContext(fill("HUD.@rootRemove@(RADAR);"), ctx);
 ok("removing an element forgets it", NS.nodes().length === 6);
 ok("…and its nodes stop belonging to any element", I.groupOf(G.RADAR) === null);
 
-// ---- בילד חדש: שמות מהגילוי ----
+// ---- מטמון ישן שהתחדש: שמות אחרים מהגילוי ----
 
 const renamed = Object.assign({}, I.N, { rootTrap: "zz9_1", settingsTrap: "yy9_1" });
 const partial = Object.assign({}, renamed);
 delete partial.alpha;
 I.applyGame({ names: partial });
-ok("a partial set of names is ignored — the seed stays whole",
-  I.N.rootTrap === "o11h_1" && NS.debug.names === "seed");
+ok("a partial set of names is ignored — the current ones stay whole",
+  I.N.rootTrap === N.rootTrap && I.N.alpha === N.alpha);
 
 env.send("hudGame", { names: renamed });
-ok("a complete set from the bridge replaces the seed", I.N.rootTrap === "zz9_1" && NS.debug.names === "bundle");
-vm.runInContext(`
-function HudRoot2(){ this.n11h_1=new DisplayNode(0,0,1,1); this.z116=function(n){ this.n11h_1.t3k(n); };
-  this.a117=function(n){}; this.zz9_1=1; }
-function BattleSettings2(){ this.ssi_1=true; this.tsi_1=50; this.yy9_1=true; }
+ok("a complete set from the bridge replaces them", I.N.rootTrap === "zz9_1" && NS.debug.names === "bundle");
+vm.runInContext(fill(`
+function HudRoot2(){ this.@rootContainer@=new DisplayNode(0,0,1,1); this.@rootAdd@=function(n){ this.@rootContainer@.__addKid(n); };
+  this.@rootRemove@=function(n){}; this.zz9_1=1; }
+function BattleSettings2(){ this.centered_1=true; this.size_1=50; this.yy9_1=true; }
 BattleSettings2.prototype.toString=BattleSettings.prototype.toString;
 globalThis.HUD2 = new HudRoot2(); globalThis.SETTINGS4 = new BattleSettings2();
-`, ctx, { filename: "newbuild.js" });
+`), ctx, { filename: "newbuild.js" });
 ok("…and the root trap is armed on the new field", I.root === G.HUD2);
 ok("…as is the settings trap", I.battleSettings === G.SETTINGS4 && I.layout() === "centered");
+// השמות הקודמים שייכים עכשיו למחלקות זרות: המלכודות שלהם יורדות
+const onProto = (prop) => vm.runInContext("!!Object.getOwnPropertyDescriptor(Object.prototype, " + JSON.stringify(prop) + ")", ctx);
+ok("…and the previous root and settings traps are off Object.prototype",
+  !onProto(N.rootTrap) && !onProto(N.settingsTrap));
+ok("…while the service trap, whose name did not change, stays", onProto(N.serviceTrap));
 
 ok("nothing threw along the way", NS.debug.lastError === null);
 

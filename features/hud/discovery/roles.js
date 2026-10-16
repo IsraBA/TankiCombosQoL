@@ -6,7 +6,7 @@
 
   window.TankiQoL = window.TankiQoL || {};
   const P = (window.TankiQoL.HudParse = window.TankiQoL.HudParse || {});
-  const { ID, esc, re } = P;
+  const { ID, esc, re, reg } = P;
   const G = "(" + ID + ")";
 
   // כל H(C).M=function( בסדר הופעה
@@ -46,11 +46,13 @@
     return out;
   }
 
-  // lateinit -> שדה DI -> המחלקה שהוזרקה בו
-  function injected(src, late) {
-    const f = re("var n=t\\.", G, ";if\\(null!=n\\)return n;", ID, "\\(\"", late, "\"\\)").exec(src);
-    const di = f && re("this\\.", esc(f[1]), "=this\\.", ID, "\\(\\)\\.", ID, "\\(", ID, "\\(", G, "\\)\\)").exec(src);
-    return di ? di[1] : null;
+  // בקר ה-HUD של הטנק מזריק בריאות, אנרגיה, אפקטים — בסדר הזה
+  function tankParts(src, defs) {
+    const at = src.indexOf("callableName=\"provideDefaultTitlePosition\"");
+    const own = at > 0 ? ownerOf(defs, at) : null;
+    if (!own) return [];
+    const di = reg("this\\.", ID, "=this\\.", ID, "\\(\\)\\.", ID, "\\(", ID, "\\(", G, "\\)\\)");
+    return [...src.slice(own.at, at).matchAll(di)].map((m) => m[1]).slice(0, 3);
   }
 
   // שם המחלקה שה-toString שלה נפתח בשם הזה
@@ -69,11 +71,8 @@
     });
     const body = (x) => (x.own ? src.slice(x.own.at, x.at) : "");
     const nuke = dataClass(src, "NuclearRechargeHudParams");
-    const tank = {
-      hpBar: injected(src, "healthHudComponent"),
-      energyBar: injected(src, "weaponStatusHudComponent"),
-      activeSupplies: injected(src, "localStatusEffectHudComponent"),
-    };
+    const [hpBar, energyBar, activeSupplies] = tankParts(src, defs);
+    const tank = { hpBar, energyBar, activeSupplies };
 
     const RULES = {
       killLog: (x) => x.arg === "logHudElement",

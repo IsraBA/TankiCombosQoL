@@ -96,6 +96,48 @@ Two patterns are already in use; prefer them over inventing a third.
   over fixed `setTimeout` delays. Short `sleep()` (≤50 ms) is fine where a game
   animation genuinely needs time.
 
+## Game names and discovery anchors
+
+Everything the extension knows about the game's *code* is found at run time;
+this section is how to write that finding so it survives the next build. The
+rationale and the machinery are in `architecture.md` → "Names come only from
+the bundle".
+
+- **No minified name in the code — ever.** Not as a seed, not as a "latest known
+  build" fallback, not in a comment that code depends on. Every trap field,
+  class and method name comes from a `discovery/` file reading the live bundle.
+  `test_no_names.js` fails on an `xx_1`-shaped literal or a `SEED` constant.
+  Minified names in the *docs* are fine as labels for what was researched.
+- **Anchor only on what minification keeps**, roughly strongest first:
+  1. enum entry names (`new C("DESKTOP",2)`) and data-class `toString` strings
+     (`"BattleSettings(isCenteredLayout="+…`) — they are the source names;
+  2. `callableName="…"` (the name of a Kotlin function reference) and webpack
+     asset paths;
+  3. DI and lateinit strings (`vj("radarVisual")`) — **the weakest**: the string
+     only exists while the field is `lateinit`. `6a85fbcf` turned three of them
+     into nullable fields and the strings simply vanished;
+  4. code shape (a regex over a method body) — the last resort, and then match
+     every identifier as `[\w$]+`, never by its current spelling.
+  When an anchor breaks, look for a surviving name in the same area before
+  reaching for shape.
+- **A minified name repeats across webpack modules.** The same short name is a
+  class in one module and a function in another (the garage proxy's class name
+  was reused on six of twelve builds). Never take the first `indexOf` of the
+  whole bundle: search inside the module of the anchor (`HudParse.moduleOf`,
+  `importOf`, `exportOf`) or take the definition nearest the call site
+  (`HudParse.fnOffsets`).
+- **Verify a reading against what it means, not only that it matched.** A regex
+  that finds *a* name passes every harness that only checks for presence. Tie
+  it to its meaning: a field count, the order a ctor assigns, a live
+  measurement (the HUD), a value the game itself computes.
+- **Research notes are hypotheses.** Before building on one, confirm it in the
+  current bundle. The kill log's position was written down as "read from the
+  HTML HUD" and believed for a month; the bundle had it as four literals.
+- **Bump `CACHE_VERSION`** in a feature's `detect.js` (and `V` in the HUD's
+  `compose.js`) whenever the discovery's output *shape* changes. A fix that only
+  changes values reaches users on the next release by itself (`shared/bundle.js`
+  rediscovers whatever an older version cached).
+
 ## UI and styling
 
 - **All extension CSS classes are prefixed `cme_`** — collisions with Tanki's own
@@ -130,6 +172,17 @@ Preserve the file's existing line endings, and check afterwards: a file
 containing `×` followed by another high byte is corrupted. Prefer the editing
 tools over scripted rewrites whenever the change is small enough.
 
+Two more traps from scripted edits:
+
+- **Mixed line endings.** Most files here are CRLF on disk. A script that
+  inserts `"\n"` into one leaves a file with both, which git and the harnesses
+  read fine and which still diffs as noise. Normalise after writing, and check:
+  a file must not contain both `\r\n` and a bare `\n`.
+- **Inline shell scripts eat backslashes.** A heredoc passed through the agent's
+  shell tool can arrive with `\\` collapsed to `\`, so a regex or `"\t"` inside an
+  inline Python/Node script silently means something else. Write such a script
+  to a file with the editor tool and run the file.
+
 ## Finishing a round of edits
 
 Three steps, every time — **not only before a release** (rule 9 in
@@ -139,8 +192,16 @@ Three steps, every time — **not only before a release** (rule 9 in
    scaffolding, and they are the only automated check this project has:
    - moved or split a source file → fix the file list at the top of every harness
      that loads it, or it silently stops testing anything;
-   - fixed a bug → add the check that would have caught it;
-   - new behaviour → new checks.
+   - fixed a bug → add the check that would have caught it, and **watch it fail on
+     the code before the fix** (`git stash push <file>`, run, `git stash pop`). A
+     check that passes on the broken code too is testing nothing;
+   - new behaviour → new checks;
+   - a harness that needs game names gets them **from the shipped discovery** on the
+     newest bundle (`game_names.js`), never from a list written into the
+     harness — the extension has none either;
+   - every feature that reads the game has two kinds of harness: one that runs its
+     discovery on **every** bundle in `research/`, and one that runs its MAIN side
+     in a sandbox (traps, captures, the bridge).
 
    A harness that no longer matches the code is worse than no harness: it reports
    PASS for code it isn't running.

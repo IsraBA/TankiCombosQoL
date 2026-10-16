@@ -44,6 +44,18 @@
     return null;
   }
 
+  // שם מקומי שמיובא כ-<param>.$_$.<key> -> המודול שמייצא אותו, והמפתח
+  P.importOf = function (src, name, at) {
+    const mod = P.moduleOf(src, at);
+    if (!mod) return null;
+    const imp = reg("[,;]", esc(name), "=(", ID, ")\\.\\$_\\$\\.(", ID, ")[,;]");
+    imp.lastIndex = mod.start;
+    const m = imp.exec(src);
+    if (!m || m.index > at) return null;
+    const target = moduleById(src, mod.ids[mod.names.indexOf(m[1])]);
+    return target ? { mod: target, key: m[2] } : null;
+  };
+
   // שם ממוזער חוזר בין מודולים, לא בתוכם
   function defsIn(src, mod, name) {
     const needle = "function " + name + "(";
@@ -82,18 +94,18 @@
   P.enumAt = function (src, name, at) {
     const mod = P.moduleOf(src, at);
     if (!mod) return null;
-    const imp = reg("[,;]", esc(name), "=(", ID, ")\\.\\$_\\$\\.(", ID, ")[,;]");
-    imp.lastIndex = mod.start;
-    const m = imp.exec(src);
-    if (!m || m.index > at) return accessorIn(src, mod, name, 0);
-
-    const target = moduleById(src, mod.ids[mod.names.indexOf(m[1])]);
-    if (!target) return null;
-    const table = src.indexOf("t.$_$=t.$_$||{}", target.start);
-    if (table < 0 || table > target.end) return null;
-    const ex = re("t\\.\\$_\\$\\.", esc(m[2]), "=(?:(", ID, ")[,}]|function\\(\\)\\{return (", ID, ")\\(\\),(", ID, ")\\})")
-      .exec(src.slice(table, target.end));
+    const ext = P.importOf(src, name, at);
+    if (!ext) return accessorIn(src, mod, name, 0);
+    const ex = P.exportOf(src, ext.mod, ext.key,
+      "(?:(" + ID + ")[,}]|function\\(\\)\\{return (" + ID + ")\\(\\),(" + ID + ")\\})");
     if (!ex) return null;
-    return ex[1] ? accessorIn(src, target, ex[1], 0) : entryIn(src, target, ex[2], ex[3], 0);
+    return ex[1] ? accessorIn(src, ext.mod, ex[1], 0) : entryIn(src, ext.mod, ex[2], ex[3], 0);
+  };
+
+  // t.$_$.<key>=<value> בטבלת הייצוא של המודול; value הוא ביטוי רגולרי
+  P.exportOf = function (src, mod, key, value) {
+    const table = src.indexOf("t.$_$=t.$_$||{}", mod.start);
+    if (table < 0 || table > mod.end) return null;
+    return re("t\\.\\$_\\$\\.", esc(key), "=", value).exec(src.slice(table, mod.end));
   };
 })();

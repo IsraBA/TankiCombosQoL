@@ -60,7 +60,7 @@
     const out = {};
     for (const key of Object.keys(CLASSES)) {
       const t = trapField(src, CLASSES[key]);
-      if (!t) return null;   // בלי כל הארבעה נשארים על ה-SEED
+      if (!t) return null;   // בלי כל הארבעה לא מחמשים כלום
       out[key] = t;
     }
     return out;

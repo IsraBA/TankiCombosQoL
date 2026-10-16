@@ -296,7 +296,7 @@ How each user preference maps onto the state:
 The game **does** own half the answer. `UpgradableItemParams` carries
 
 ```js
-hr8 = function () { return this.currentLevel === this.maxLevel() }
+hr8 = function () { return this.currentLevel >= this.maxLevel() }   // `===` before f1de53fa
 ```
 
 and uses it exactly as "nothing left to upgrade" (`!item.upgradeableParams.hr8()`
@@ -329,8 +329,8 @@ Grenades exist twice, in two categories:
 | `GRENADE` | its **ammo**, one item per family, carrying the real `count` |
 
 They share a name, and the game links them through `bazookaToSupply` — a Kotlin
-map that happens to be the very field the state trap sits on (`vq0_1`, the last
-field in `Garage`). Reading that map means resolving a minified getter through a
+map on the `Garage` state (its last field until `f1de53fa` added two more).
+Reading that map means resolving a minified getter through a
 Kotlin `HashMap`, so `draw.js` matches on the name instead: both sides come from
 the game in the same locale, so it holds in every language. A family with no
 `GRENADE` item, or one whose count is 0, is out of the pool.

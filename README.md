@@ -293,7 +293,8 @@ Tanki Online or its publisher.
 ## 🏗️ Architecture
 
 Vanilla JavaScript, Manifest V3, no build step and no external libraries. Each
-feature is self-contained under `features/`; only UI components are shared.
+feature is self-contained under `features/`; only the UI components and the
+bundle-reading pipeline are shared.
 
 ```
 ┌────────────────────── ISOLATED world ──────────────────────┐
@@ -304,6 +305,8 @@ feature is self-contained under `features/`; only UI components are shared.
 │  features/translator/isolated/    chrome.* access:           │
 │    bridge.js   settings sync + translate relay               │
 │    detect.js   parses the game bundle for the chat HUD       │
+│  shared/bundle.js   reads the game's script once for every   │
+│                     feature, caches what it found per build   │
 └──────────────────────────┬──────────────────────────────────┘
                            │ window.postMessage bridges
 ┌──────────────────────────┴───── MAIN world ─────────────────┐
@@ -332,7 +335,10 @@ keeps it straight: **anything under a `game/` folder runs in MAIN.**
 `shared/` holds the native-styled `switch`, `select`, `drawer`, `button`,
 `slider` and `dialog` components plus `icons.js`. Because JS worlds don't share a `window`, the component files are
 listed in both worlds' content-script blocks; each world gets its own copy on
-`window.TankiQoL`.
+`window.TankiQoL`. It also holds `bundle.js`: the game's code is minified and
+renamed on every update, so every feature finds what it needs by reading the
+game's script at run time — the extension carries no names of the game's
+internals at all — and `bundle.js` does that reading once for all of them.
 
 ---
 
@@ -343,13 +349,14 @@ listed in both worlds' content-script blocks; each world gets its own copy on
 ├── manifest.json              # 10 content-script blocks (CSS / translator ×2 / combos ×3 / advisor ×2 / hud ×2)
 ├── background.js              # service worker — translation fetch
 ├── shared/
+│   ├── bundle.js              # reads the game's script once for every feature's discovery
 │   ├── icons.js               # SVG paths more than one feature draws
 │   └── components/            # switch, select, drawer, button, slider, dialog
 ├── features/
 │   ├── combos/                # folders follow the flow; any game/ folder = MAIN world
 │   │   ├── main.js            # orchestrator
 │   │   ├── lib/               # constants (DOM selectors), utils, language, cleaner
-│   │   ├── discovery/         # find this build's minified names, arm the hook
+│   │   ├── discovery/         # find this build's minified names in the game's script
 │   │   ├── bridge/            # the pipe between the two JS worlds
 │   │   ├── capture/           # hold the game's live garage state
 │   │   ├── save/              # read the mounted loadout and store it

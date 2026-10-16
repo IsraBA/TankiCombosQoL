@@ -4,39 +4,10 @@
 // The anchors and the recovery procedure: CLAUDE.mds/translator.md
 
 (function () {
-  const BUNDLE_URL_RE = /\/main\.[A-Za-z0-9]+\.js(?:[?#]|$)/;
-  const CACHE_PREFIX = 'hudConstants:';
+  // גרסת הסכמה, חלק ממפתח המטמון — להעלות בכל שינוי בפלט
+  const CACHE_VERSION = 1;
 
   function escapeRe(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
-
-  function findBundleUrl() {
-    for (const s of document.scripts) {
-      if (s.src && BUNDLE_URL_RE.test(s.src)) return s.src;
-    }
-    return null;
-  }
-
-  function waitForBundleUrl(timeoutMs) {
-    return new Promise((resolve, reject) => {
-      const initial = findBundleUrl();
-      if (initial) return resolve(initial);
-
-      const observer = new MutationObserver(() => {
-        const url = findBundleUrl();
-        if (url) {
-          observer.disconnect();
-          clearTimeout(timer);
-          resolve(url);
-        }
-      });
-      observer.observe(document.documentElement || document, { childList: true, subtree: true });
-
-      const timer = setTimeout(() => {
-        observer.disconnect();
-        reject(new Error('bundle URL not found within ' + timeoutMs + 'ms'));
-      }, timeoutMs);
-    });
-  }
 
   // Ported verbatim from the research userscript's discover(). Returns the
   // HUD name-set or null. Field names match what chat.js expects.
@@ -83,45 +54,27 @@
     return { helper, cls, appendFn, finalizeFn, offset, ySub, zSub, count, ptr, evict, renderMethods };
   }
 
+  // חשוף להרנס, כמו הגילויים של שאר הפיצ'רים
+  window.TankiQoL = window.TankiQoL || {};
+  window.TankiQoL.ChatDiscover = { discover };
+
   function send(action, payload) {
     window.postMessage({ __ct: true, dir: 'i2m', action, payload }, '*');
   }
 
-  function loadCached(cacheKey) {
-    return new Promise((resolve) => {
-      chrome.storage.local.get([cacheKey], (got) => resolve(got[cacheKey] || null));
-    });
-  }
-
   let lastConstants = null;  // kept so we can re-send on the MAIN 'ready' handshake
 
-  (async function run() {
-    let url;
-    try {
-      url = await waitForBundleUrl(30000);
-    } catch (e) {
-      return;   // הבאנדל לא נמצא בזמן
-    }
-    const cacheKey = CACHE_PREFIX + url;
-
-    let constants = await loadCached(cacheKey);
-    if (!constants) {
-      try {
-        const res = await fetch(url, { credentials: 'omit' });
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        const text = await res.text();
-        constants = discover(text);
-        if (constants) chrome.storage.local.set({ [cacheKey]: constants });
-      } catch (e) {
-        console.error('[ct] detect: fetch/parse failed:', e);
-      }
-    }
-
-    // בלי גילוי נשארים על שמות ה-seed של chat.js
-    if (!constants) return;
-    lastConstants = constants;
-    send('hudConstants', constants);
-  })();
+  // ה-HUD של הצ'אט נבנה רק בכניסה לקרב: לא דחוף
+  window.TankiQoL.Bundle.register({
+    name: 'hudConstants',
+    version: CACHE_VERSION,
+    priority: 3,
+    discover,
+    publish(constants) {
+      lastConstants = constants;
+      send('hudConstants', constants);
+    },
+  });
 
   // Re-send on MAIN ready (covers detect finishing before MAIN's listeners).
   window.addEventListener('message', (e) => {

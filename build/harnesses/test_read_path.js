@@ -46,6 +46,27 @@ for (const f of FILES) {
   });
 }
 
+// ---- לפני הגילוי: אין שמות, אין מלכודות, ותשובה מיידית ----
+const NAMES = require("./game_names").garage();
+const trapsBefore = vm.runInContext(
+  "Object.getOwnPropertyNames(Object.prototype).filter((k) => /_1$/.test(k))", ctx);
+vm.runInContext(`
+  __listeners.forEach((fn) => fn({
+    source: window,
+    data: { __cmb: true, dir: 'i2m', action: 'readCombo', payload: { id: 5 } },
+  }));
+`, ctx);
+const earlyReply = vm.runInContext("__posted.find((m) => m.action === 'comboResult')", ctx);
+const namesBefore = vm.runInContext("__CMB.names()", ctx);
+
+// השמות מגיעים כמו מ-detect.js
+vm.runInContext(`
+  __listeners.forEach((fn) => fn({
+    source: window,
+    data: { __cmb: true, dir: 'i2m', action: 'garageConstants', payload: ${JSON.stringify(NAMES)} },
+  }));
+`, ctx);
+
 // מצב משחק מזויף, נבנה בתוך ה-sandbox כדי שה-trap יירה
 vm.runInContext(
   `
@@ -92,7 +113,7 @@ vm.runInContext(
     o[DF.id] = id; o[DF.baseItemId] = base; o[DF.installed] = installed;
     o[DF.name] = name; o[DF.category] = 'DEVICE';
     o[DF.infinityLifetimeItem] = owned !== false;
-    o[DF.previewImage] = { r92: () => 'https://cdn/' + name + '.webp' };
+    o[DF.previewImage] = { [S.urlMethod]: () => 'https://cdn/' + name + '.webp' };
     return o;
   }
   const devices = [
@@ -125,6 +146,11 @@ function check(name, cond) {
     console.log("FAIL " + name);
   }
 }
+
+check("no names before discovery — nothing is hardcoded", namesBefore === null);
+check("…and no trap on Object.prototype", trapsBefore.length === 0);
+check("a request before discovery is answered at once, as a failure",
+  !!earlyReply && earlyReply.payload.id === 5 && earlyReply.payload.ok === false);
 
 const read = vm.runInContext("__CMB.read()", ctx);
 check("state captured, read ok", read.ok === true);
@@ -207,6 +233,45 @@ check(
 check(
   "boot announced ready",
   replies.some((m) => m.action === "ready"),
+);
+
+// ---- שמות חדשים (מטמון ישן שהתחדש) מחליפים את הקודמים ----
+// ההצלבה: שדה ה-state החדש הוא שם ה-proxy הקודם
+vm.runInContext(
+  `
+  globalThis.__firstN = JSON.parse(JSON.stringify(__CMB.names()));
+  const next = JSON.parse(JSON.stringify(__firstN));
+  next.trapField = __firstN.proxyTrapField;
+  next.proxyTrapField = 'zz9_1';
+  __listeners.forEach((fn) => fn({
+    source: window,
+    data: { __cmb: true, dir: 'i2m', action: 'garageConstants', payload: next },
+  }));
+`,
+  ctx,
+);
+check(
+  "a trap the new names dropped is off Object.prototype",
+  vm.runInContext("!Object.getOwnPropertyDescriptor(Object.prototype, __firstN.trapField)", ctx),
+);
+check(
+  "…and the new names are armed",
+  vm.runInContext("!!Object.getOwnPropertyDescriptor(Object.prototype, 'zz9_1')", ctx),
+);
+const capturesBefore = vm.runInContext("__CMB.debug.captures", ctx);
+vm.runInContext(
+  `
+  const st = {};
+  for (const f of Object.values(__CMB.names().stateFields)) st[f] = null;
+  st[__firstN.proxyTrapField] = 1;   // שם ה-proxy הקודם, עכשיו שדה ה-state
+  globalThis.__state2 = st;
+`,
+  ctx,
+);
+check(
+  "a state on a field armed before for another role is still captured",
+  vm.runInContext("__CMB.debug.captures", ctx) === capturesBefore + 1 &&
+    vm.runInContext("__CMB.state() === __state2", ctx),
 );
 
 console.log("");

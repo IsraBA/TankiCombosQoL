@@ -21,7 +21,8 @@ The extension is published and has 500+ users, so store hygiene matters.
   was a deliberate, accepted trade-off for the translation hosts — don't "fix" it
   by making them optional without asking the developer.
 - **Bump `version` in `manifest.json` for every upload**; CWS rejects re-uploads
-  of the same version.
+  of the same version. When a release happens, and which number it gets, is the
+  developer's call — a fix does not bump the version by itself.
 
 ## Packaging
 
@@ -85,7 +86,7 @@ The zip lands in `build/dist/tanki-combos-qol-v<version>.zip`.
    needed first:
    - on a fresh profile, Settings → Controls → HUD EDITOR: every element is
      drawn where the game puts it, at the right size, including the HTML ones
-     (name/rank/XP, the top-right buttons, FPS) and the chat;
+     (name/rank/XP, the top-right buttons, FPS), the chat and the kill feed;
    - in the console, `__HUD.debug.names === "bundle"`, and in battle
      `__HUD.nodes()` gives every element a `role` (not `null`);
    - drag one, resize it, fade it → enter a battle and confirm it matches,
@@ -113,6 +114,12 @@ The zip lands in `build/dist/tanki-combos-qol-v<version>.zip`.
    and confirm no duplicate chat lines.
 10. After code changes: click the refresh icon on the extension card, then reload
     the game tab.
+11. **After a game update** (a new `main.<hash>.js`): first follow
+    `debugging.md` → "When the game ships a new build". Then run this list
+    twice — once on the very first load of the new build (the discovery cache is
+    cold; equipping may fall back to the DOM path and the HUD may not know its
+    layout until a reload — expected, see `architecture.md`), and once after a
+    reload, when everything must work.
 
 Before any release, also run the offline harnesses (`debugging.md`) — they cover
 the discovery and write logic that manual testing can only sample.

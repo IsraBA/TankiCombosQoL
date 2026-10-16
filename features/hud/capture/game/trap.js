@@ -24,6 +24,19 @@
     }
     const list = [{ check, onCapture }];
     armed.set(prop, list);
+    list.set = function (v) {
+      // שומרים כ-own property, כדי שהאובייקט יפסיק לעבור דרכנו
+      Object.defineProperty(this, prop, {
+        value: v, writable: true, configurable: true, enumerable: true,
+      });
+      for (const e of list) {
+        try {
+          if (e.check(this)) e.onCapture(this);
+        } catch (err) {
+          NS.debug.lastError = String(err);
+        }
+      }
+    };
     try {
       Object.defineProperty(W.Object.prototype, prop, {
         configurable: true,
@@ -31,23 +44,23 @@
         get() {
           return undefined;
         },
-        set(v) {
-          // שומרים כ-own property, כדי שהאובייקט יפסיק לעבור דרכנו
-          Object.defineProperty(this, prop, {
-            value: v, writable: true, configurable: true, enumerable: true,
-          });
-          for (const e of list) {
-            try {
-              if (e.check(this)) e.onCapture(this);
-            } catch (err) {
-              NS.debug.lastError = String(err);
-            }
-          }
-        },
+        set: list.set,
       });
     } catch (e) {
       NS.debug.lastError = String(e);
     }
+  };
+
+  // שדה שהתרוקן יוצא מ-Object.prototype, אם המלכודת עדיין שלנו
+  I.disarmTrap = function (prop, check) {
+    const list = armed.get(prop);
+    if (!list) return;
+    const i = list.findIndex((e) => e.check === check);
+    if (i >= 0) list.splice(i, 1);
+    if (list.length) return;
+    armed.delete(prop);
+    const d = Object.getOwnPropertyDescriptor(W.Object.prototype, prop);
+    if (d && d.set === list.set) delete W.Object.prototype[prop];
   };
 
   // מאזינים פנימיים: 'root', 'settings', 'service', 'layout', 'measure'

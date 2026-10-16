@@ -32,7 +32,7 @@ mutation, so nothing ever disagrees.
 |---|---|---|---|
 | `i2m` | `settings` | `{enabled, showOriginal, targetLang}` | initial + on every storage change |
 | `i2m` | `config` | `{flagsBase}` | paths MAIN can't resolve itself |
-| `i2m` | `hudConstants` | discovered name-set | from `detect.js` (or cache) |
+| `i2m` | `hudConstants` | discovered name-set | from `detect.js` (or cache); nothing is trapped before it |
 | `i2m` | `translateResult` | `{id, ok, text, lang, error}` | reply to a translate request |
 | `m2i` | `ready` | — | MAIN's listeners are up; ISOLATED resends everything |
 | `m2i` | `set` | partial settings | MAIN asks ISOLATED to write storage |
@@ -186,7 +186,10 @@ render methods with the text we want.
   just blanked, so what follows is a replay — we adopt the fresh args into
   existing records (matched by method + original text, in order) instead of
   re-recording. Time-bounded (1.5 s) so a stale queue can't swallow a real new
-  message. `replayAdopts` counts it.
+  message. `replayAdopts` counts it. Since `6a85fbcf` the HUD's constructor
+  starts its max-lines at 8 instead of 0, so the same re-emit also runs once
+  while the HUD is being built; `captureHud` has just emptied the records, so
+  those messages are recorded as new — harmless.
 
 ## RTL / bidi
 
@@ -229,8 +232,9 @@ and drop a matching flag SVG at `features/translator/assets/flags/<value>.svg`
 
 ## Cross-build self-location (`isolated/detect.js`)
 
-Every minified name rotates per build. `detect.js` fetches the live bundle
-(same-origin, from the browser cache) and regexes out the HUD name-set. Anchors:
+Every minified name rotates per build. `detect.js` registers with
+`shared/bundle.js`, which hands it the live bundle (one download for every
+feature), and regexes out the HUD name-set. Anchors:
 
 - **append fn** = the `NAME(this,": ",` call (the "name: text" separator).
 - **HUD class + proto-set helper** (`s$`/`_q`/`sk`/`v$` — can contain `$`, so
@@ -242,14 +246,21 @@ Every minified name rotates per build. `detect.js` fetches the live bundle
 - **render methods** = single-arg methods on the class calling BOTH the append
   and finalize fns (the 2-arg resize method is excluded by the arity filter).
 
-The trap field is the **offset object**. `chat.js` seeds the latest-known build
-so it works during the discovery fetch; discovery overrides it. Cached in
-`chrome.storage.local` keyed by bundle URL (which contains the build hash, so a
-stale cache can't happen). **Verified on 7 bundles:**
+The trap field is the **offset object**. `chat.js` has no names of its own:
+`D` is `null` and no trap exists until `hudConstants` arrives; a newer set
+replaces the trap, and the old one comes off `Object.prototype` (`architecture.md`
+→ "Names come only from the bundle"). The chat HUD is only built on entering a
+battle, so the translator's place in the discovery queue (after the HUD names,
+combos and the advisor) costs nothing. Cached as `hudConstants:v<N>:<url>`.
+**Verified on 12 bundles** by `build/harnesses/test_translator_discover.js`:
 
 | build | class | append | finalize | evict | offset | count | ptr |
 |---|---|---|---|---|---|---|---|
-| 009aa16b (seed) | `MAn` | `kAn` | `yAn` | `q1fr` | `k1fr_1` | `i1fr_1` | `j1fr_1` |
+| 6a85fbcf | `BNn` | `$Nn` | `yNn` | `r1gi` | `l1gi_1` | `j1gi_1` | `k1gi_1` |
+| 8f7f4827, 7f05e212 | `tRn` | `MAn` | `OAn` | `w1fv` | `q1fv_1` | `o1fv_1` | `p1fv_1` |
+| f1de53fa | `QAn` | `OAn` | `NAn` | `w1fv` | `q1fv_1` | `o1fv_1` | `p1fv_1` |
+| 1327298e | `SAn` | `fAn` | `cAn` | `r1fq` | `l1fq_1` | `j1fq_1` | `k1fq_1` |
+| 009aa16b | `MAn` | `kAn` | `yAn` | `q1fr` | `k1fr_1` | `i1fr_1` | `j1fr_1` |
 | c0feea5a | `OAn` | `kAn` | `yAn` | `m1fo` | `g1fo_1` | `e1fo_1` | `f1fo_1` |
 | bcae4cb9 | `yRn` | `iRn` | `nRn` | `i1fo` | `c1fo_1` | `a1fo_1` | `b1fo_1` |
 | c4428a58 | `zMn` | `cMn` | `aMn` | `d1ff` | `x1fe_1` | `v1fe_1` | `w1fe_1` |
@@ -259,20 +270,23 @@ stale cache can't happen). **Verified on 7 bundles:**
 
 ## When a Tanki build breaks the translator
 
-Symptom: after a Tanki update, chat stops translating.
+Symptom: after a Tanki update, chat stops translating. The general procedure for
+a new build is in `debugging.md` → "When the game ships a new build"; the
+translator-specific steps:
 
 1. Page console: `__CT_STATE()`. If `discovered:false`, detection failed.
 2. Get the new bundle: `copy(Array.from(document.scripts).find(s =>
    /main\.[a-f0-9]+\.js/.test(s.src)).src)`, download it into
    `../../../research/` as `main.<hash>.js`.
-3. Run `discover()` from `detect.js` against it offline. It prints the extracted
-   name-set, or `null` if the regexes no longer match.
+3. Run `node build/harnesses/test_translator_discover.js`. It runs the shipped
+   `discover()` on every bundle and prints each name-set, or fails the bundle
+   whose regexes no longer match.
 4. If it returns a set → detection logic is fine; the extension self-locates.
 5. If `null` → Tanki changed the chat HUD shape. Find the chat render code (grep
    the `": "` separator, the `+23` line-advance, the `if(this.<count><1)return`
    evict) and update the anchors. Re-verify on the new build **and** on the old
-   ones (the bundles in `research/` are the regression set), then refresh the
-   seed in `chat.js` and the table above.
+   ones (the bundles in `research/` are the regression set), and add the build
+   to the table above.
 6. If detection is fine but capture fails (`__CT_HUD` stays null in battle), the
    trap field (offset) is wrong — re-derive it from `this.<offset> = new …` and
    confirm `looksLikeHud` still matches.

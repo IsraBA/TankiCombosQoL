@@ -30,51 +30,87 @@
     return true;
   }
 
-  // מלכודת גנרית: לכל שדה בודק ומטפל משלו
+  // מלכודת גנרית: שדה -> [{check, onCapture}]; שני תפקידים יכולים לחלוק שם
   const armed = new Map();
   function armTrap(prop, check, onCapture) {
-    if (!prop || armed.has(prop)) return;
-    armed.set(prop, true);
+    if (!prop) return;
+    const mine = armed.get(prop);
+    if (mine) {
+      if (!mine.some((e) => e.check === check)) mine.push({ check, onCapture });
+      return;
+    }
+    const list = [{ check, onCapture }];
+    armed.set(prop, list);
+    list.set = function (v) {
+      // שומרים כ-own property, כדי שהאובייקט יפסיק לעבור דרכנו
+      Object.defineProperty(this, prop, {
+        value: v, writable: true, configurable: true, enumerable: true,
+      });
+      for (const e of list) {
+        try {
+          if (e.check(this)) e.onCapture(this);
+        } catch (err) { NS.debug.lastError = String(err); }
+      }
+    };
     try {
       Object.defineProperty(W.Object.prototype, prop, {
         configurable: true, enumerable: false,
         get() { return undefined; },
-        set(v) {
-          // שומרים כ-own property, כדי שהאובייקט יפסיק לעבור דרכנו
-          Object.defineProperty(this, prop, {
-            value: v, writable: true, configurable: true, enumerable: true,
-          });
-          try {
-            if (check(this)) onCapture(this);
-          } catch (e) { NS.debug.lastError = String(e); }
-        },
+        set: list.set,
       });
     } catch (e) { NS.debug.lastError = String(e); }
   }
 
-  // ה-state נוצר מחדש בכל פעולה, ולכן המלכודת נשארת ותמיד מחזיקה את האחרון
+  // שדה שהתרוקן יוצא מ-Object.prototype, אם המלכודת עדיין שלנו
+  function disarm(prop, check) {
+    const list = armed.get(prop);
+    if (!list) return;
+    const i = list.findIndex((e) => e.check === check);
+    if (i >= 0) list.splice(i, 1);
+    if (list.length) return;
+    armed.delete(prop);
+    const d = Object.getOwnPropertyDescriptor(W.Object.prototype, prop);
+    if (d && d.set === list.set) delete W.Object.prototype[prop];
+  }
+
+  // ה-state נבנה מחדש בכל פעולה; תמיד מחזיקים את האחרון
+  function onState(o) {
+    I.latestState = o;
+    NS.debug.captures++;
+  }
+  // דרכו מגיעים לקונטרולר, ומשם ל-store
+  function onProxy(o) {
+    I.garageProxy = o;
+    NS.debug.proxyCaptured = true;
+  }
+  // נלכדת בפעם הראשונה שהמשחק מרכיב פריט בעצמו
+  function onMountAction(o) {
+    if (I.mountActionProto) return;
+    I.mountActionProto = Object.getPrototypeOf(o);
+    NS.debug.mountActionCaptured = true;
+    NS.debug.mountActionSource = 'trapped-on-real-mount';
+  }
+  // נלכדת כשהמשתמש לוחץ על פריט כלשהו במוסך
+  function onSelectAction(o) {
+    if (I.selectActionProto) return;
+    I.selectActionProto = Object.getPrototypeOf(o);
+    NS.debug.selectActionCaptured = true;
+  }
+
   I.armAll = function () {
-    armTrap(I.D.trapField, looksLikeState, (o) => {
-      I.latestState = o;
-      NS.debug.captures++;
-    });
-    // ה-proxy נדרש כדי להגיע לקונטרולר, ומשם ל-store
-    armTrap(I.D.proxyTrapField, looksLikeProxy, (o) => {
-      I.garageProxy = o;
-      NS.debug.proxyCaptured = true;
-    });
-    // תבנית ההרכבה — נלכדת בפעם הראשונה שהמשחק מרכיב פריט בעצמו
-    armTrap(I.D.actionNeedServerField, I.looksLikeMountAction, (o) => {
-      if (I.mountActionProto) return;
-      I.mountActionProto = Object.getPrototypeOf(o);
-      NS.debug.mountActionCaptured = true;
-      NS.debug.mountActionSource = 'trapped-on-real-mount';
-    });
-    // תבנית הבחירה — נלכדת כשהמשתמש לוחץ על פריט כלשהו במוסך
-    armTrap(I.D.selectItemIdField, I.looksLikeSelectAction, (o) => {
-      if (I.selectActionProto) return;
-      I.selectActionProto = Object.getPrototypeOf(o);
-      NS.debug.selectActionCaptured = true;
-    });
+    if (!I.D) return;
+    const want = [
+      [I.D.trapField, looksLikeState, onState],
+      [I.D.proxyTrapField, looksLikeProxy, onProxy],
+      [I.D.actionNeedServerField, I.looksLikeMountAction, onMountAction],
+      [I.D.selectItemIdField, I.looksLikeSelectAction, onSelectAction],
+    ];
+    // שם ממטמון ישן שהוחלף שייך כאן למחלקה זרה, אולי חמה
+    for (const [prop, list] of Array.from(armed)) {
+      for (const e of list.slice()) {
+        if (!want.some(([p, c]) => p === prop && c === e.check)) disarm(prop, e.check);
+      }
+    }
+    for (const [prop, check, fn] of want) armTrap(prop, check, fn);
   };
 })();

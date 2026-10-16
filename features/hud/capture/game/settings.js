@@ -53,16 +53,18 @@
     I.emit("service", o);
   }
 
-  // כל שם נחמש פעם אחת; שם חדש מהגילוי נחמש בנוסף
-  const armed = new Set();
+  // בודק -> השדה שחומש עבורו; שם חדש מהגילוי מחליף את הקודם
+  const armedAs = new Map();
   function arm() {
     for (const [prop, check, fn] of [[N.settingsTrap, looksLikeSettings, onSettings], [N.serviceTrap, looksLikeService, onService]]) {
-      if (armed.has(prop)) continue;
-      armed.add(prop);
+      const was = armedAs.get(check);
+      if (!prop || was === prop) continue;
+      // שם קודם (מטמון ישן) שייך בבילד הזה למחלקה זרה
+      if (was) I.disarmTrap(was, check);
+      armedAs.set(check, prop);
       I.armTrap(prop, check, fn);
     }
   }
-  arm();
   I.on("game", arm);
 
   // 'centered' | 'default' | null כשעוד לא נלכד

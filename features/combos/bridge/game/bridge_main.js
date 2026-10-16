@@ -12,6 +12,14 @@
     window.postMessage({ __cmb: true, dir: 'm2i', action, payload }, '*');
   }
 
+  // בקשה -> התשובה שלה, למקרה שהשמות עוד לא הגיעו
+  const NOT_YET = {
+    readCombo: 'comboResult', readIndex: 'indexResult', cooldown: 'cooldownResult',
+    selectPaint: 'selectPaintResult', drawRandom: 'drawResult', applyCombo: 'applyResult',
+  };
+  const NO_NAMES = { ok: false, error: 'names not discovered yet' };
+  const NOT_YET_REPLY = { cooldown: { ok: true, known: false, active: false, msLeft: 0 } };
+
   // עוזר קונסול: chrome.storage קיים רק ב-ISOLATED, ולכן זה רק שולח.
   // ה-m2i הזה אינו תשובה, והגשר ב-ISOLATED מסנן אותו בלי נזק.
   NS.resetWhatsNew = function () {
@@ -26,6 +34,12 @@
 
     if (m.action === 'garageConstants') {
       try { I.applyNames(m.payload); } catch (err) { NS.debug.lastError = String(err); }
+      return;
+    }
+
+    // לפני הגילוי אין שמות: עונים מיד, בלי לגעת במשחק
+    if (!I.D && NOT_YET[m.action]) {
+      reply(NOT_YET[m.action], Object.assign({ id: (m.payload || {}).id }, NOT_YET_REPLY[m.action] || NO_NAMES));
       return;
     }
 

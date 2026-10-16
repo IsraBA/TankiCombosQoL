@@ -12,8 +12,9 @@ A Chrome extension (Manifest V3) of quality-of-life tools for
 | **HUD editor** | Move, resize and fade each battle HUD element              | `features/hud/`        |
 
 Combos and the translator are almost completely independent: different screens,
-different JS worlds, different storage areas. They share only the UI components
-in `shared/`. Keep it that way — a new feature is a new folder under
+different JS worlds, different storage areas. They share only what is in
+`shared/`: the UI components, and `bundle.js`, the one pipeline every feature's
+discovery runs on. Keep it that way — a new feature is a new folder under
 `features/`, not additions to an existing one. Two deliberate exceptions, both
 one-way: the advisor equips through combos' own path rather than reimplement it,
 and the HUD editor reads combos' `lib/constants.js` for its game selectors (the
@@ -64,6 +65,11 @@ says exactly which one that is. Do not load them all.
    harnesses in `build/harnesses/`, run them all, then run `build/make-zip.ps1`.
    The full checklist is in `CLAUDE.mds/conventions.md` — do not skip it because
    the change looked small.
+10. **No minified game name in the code.** Every trap field, class and method
+    name of the game comes from discovery reading the live bundle — no seed, no
+    "latest known build" fallback; until the names arrive a feature does nothing.
+    `build/harnesses/test_no_names.js` enforces it. Why and what it costs:
+    `CLAUDE.mds/architecture.md` → "Names come only from the bundle".
 
 ## Quick facts
 
@@ -97,7 +103,7 @@ says exactly which one that is. Do not load them all.
 ├── docs/                  # PACKAGING.md, PRIVACY.md, STORE.md
 ├── build/make-zip.ps1     # builds the store zip
 ├── build/harnesses/       # the offline checks — plain `node <file>.js`
-├── shared/                # icons.js + components (drawer/switch/select/button/slider/dialog)
+├── shared/                # bundle.js (every discovery's fetch + cache), icons.js, components
 ├── features/combos/       # the combos feature — one folder per flow stage
 ├── features/advisor/      # recommended protections — recon / model / view
 ├── features/hud/          # the battle HUD editor — discovery / capture / apply / dom / editor

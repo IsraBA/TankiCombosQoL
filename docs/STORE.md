@@ -24,6 +24,11 @@ The extension is already published with 500+ users, so every upload is an
   EDITOR section), "What's new", and three Privacy-tab texts that list what the
   extension does (single purpose, storage, host permission). The data-use
   disclosure is unchanged.
+- **Unreleased since v5.0** (Oct 2026): repairs for the game update `6a85fbcf`
+  (the HUD's bars and effects, the kill feed's place in the editor) and a
+  rebuilt way of finding the game's internals. **No new permission and no new
+  data transfer** — the game script was already read locally. When it ships, the
+  version number is the developer's call, and only "What's new" needs text.
 
 ## 1. Read this first: what changes for existing users
 

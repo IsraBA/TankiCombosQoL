@@ -10,7 +10,7 @@ const EXT =
   "c:/Users/User/Documents/programming/Tanki Extensions/Combos Extension/TankiCombosQoL";
 const RESEARCH = "c:/Users/User/Documents/programming/Tanki Extensions/research";
 const FILES = ["features/hud/model/layout.js"].concat(
-  ["read", "engine", "roles", "modules", "strategies", "tank", "abilities", "supplies", "texts", "assets", "compose"]
+  ["read", "engine", "roles", "modules", "strategies", "tank", "abilities", "supplies", "texts", "killlog", "assets", "compose"]
     .map((f) => "features/hud/discovery/" + f + ".js"));
 
 let failures = 0;
@@ -27,17 +27,17 @@ for (const f of FILES) {
 }
 const discover = ctx.window.TankiQoL.HudDiscover.discover;
 
-// ה-seed של MAIN: אילו שמות צריך, ומה הם בבילד האחרון
+// אילו שמות MAIN צריך: המפתחות של I.N, שאין להם ערך מראש
 const main = { window: {} };
 vm.createContext(main);
 vm.runInContext("var window = globalThis;" +
   fs.readFileSync(path.join(EXT, "features/hud/capture/game/names.js"), "utf8"), main);
-const SEED = main.__HUD.internals;
+const MAIN = main.__HUD.internals;
 
 // כל רכיב חייב אתר הוספה; מצב הקרב — אחד לכל מצב משחק
 const ROLES = { status: 5, chat: 1, killLog: 1, radar: 1, overdrive: 1, nukeRing: 1,
   activeSupplies: 1, hpBar: 1, energyBar: 1, supplyRow: 1 };
-const ELEMENTS = ["radar", "bars", "effects", "chat", "status", "overdrive", "grenades", "supplies"];
+const ELEMENTS = ["radar", "bars", "effects", "chat", "status", "overdrive", "grenades", "supplies", "killLog"];
 
 // נמדד חי: 7f05e212 מהקרב של המפתח, f1de53fa מה-POC (research/CLAUDE.md)
 const LIVE = {
@@ -52,7 +52,8 @@ const LIVE = {
 const bundles = fs.readdirSync(RESEARCH).filter((f) => /^main\.\w+\.js$/.test(f))
   .sort((a, b) => fs.statSync(path.join(RESEARCH, a)).mtimeMs - fs.statSync(path.join(RESEARCH, b)).mtimeMs);
 ok("there are bundles to test against", bundles.length >= 2);
-const latest = bundles[bundles.length - 1];
+ok("MAIN carries no names before discovery", Object.keys(MAIN.N).every((k) => MAIN.N[k] === null) &&
+  Object.keys(MAIN.offsets).length === 0);
 let reference = null;
 
 for (const b of bundles) {
@@ -62,9 +63,9 @@ for (const b of bundles) {
   if (!got || !got.game) continue;
   const { names, offsets } = got.game;
 
-  const missing = Object.keys(SEED.N).filter((k) => names[k] == null);
+  const missing = Object.keys(MAIN.N).filter((k) => names[k] == null);
   ok("every name MAIN needs was found" + (missing.length ? " — missing " + missing.join(",") : ""), !missing.length);
-  ok("…and nothing MAIN would not take", Object.keys(names).every((k) => k in SEED.N));
+  ok("…and nothing MAIN would not take", Object.keys(names).every((k) => k in MAIN.N));
 
   const tally = {};
   for (const role of Object.values(offsets)) tally[role] = (tally[role] || 0) + 1;
@@ -84,12 +85,6 @@ for (const b of bundles) {
   if (!reference) reference = layouts;
   ok("…the same geometry as the oldest bundle (the HUD has not moved)", layouts === reference);
 
-  if (b === latest) {
-    ok("the seed in names.js is this build's names",
-      Object.keys(SEED.N).every((k) => JSON.stringify(SEED.N[k]) === JSON.stringify(names[k])));
-    ok("…and its offsets", JSON.stringify(Object.keys(SEED.SEED_OFFSETS).sort()) === JSON.stringify(Object.keys(offsets).sort()) &&
-      Object.keys(offsets).every((at) => SEED.SEED_OFFSETS[at] === offsets[at]));
-  }
 }
 
 console.log(failures ? `\n${failures} check(s) FAILED` : "\nall checks passed");

@@ -6,9 +6,9 @@ printed at runtime; `__ADV.raw()` serves that need on demand.
 
 ```
 features/advisor/
-├── recon/game/probe.js      [MAIN] the four traps (SEED + discovered names)
+├── recon/game/probe.js      [MAIN] the four traps, on the discovered names
 ├── recon/discover.js        [ISOLATED] trap-field discovery from the bundle
-├── recon/detect.js          [ISOLATED] fetch, cache, send the fields to MAIN
+├── recon/detect.js          [ISOLATED] register with shared/bundle.js, send the fields to MAIN
 ├── recon/game/report.js     [MAIN] parse the roster, rank the turrets
 ├── recon/game/inventory.js  [MAIN] the account's protection modules
 ├── bridge/bridge.js         [ISOLATED] + bridge/game/bridge_main.js
@@ -57,34 +57,38 @@ four trap fields depend on the build — and since build f1de53fa broke them
   (`"BattleUsers(` etc.) it requires a **unique** `toString`, takes that class's
   constructor, verifies the ctor assigns fields in exactly the `toString` order
   (else returns null), and yields the **last** field. All four or nothing.
-- `recon/detect.js` [ISOLATED] fetches the bundle (mirrors combos'
-  `discovery/detect.js`: cached in `chrome.storage.local` as
-  `advisorFields:v<N>:<url>`, stale prefixes cleaned, `ready` handshake) and
-  posts the result to MAIN as an `__adv`/`advisorFields` message.
-- `probe.js` [MAIN] arms its `SEED` (latest known build) immediately, so the
-  current build works during the fetch, then arms whatever discovery sends.
-  `__ADV.debug.discovered` says the discovered names arrived.
+- `recon/detect.js` [ISOLATED] registers the discovery with `shared/bundle.js`
+  (cached as `advisorFields:v<N>:<url>`; the pipeline: `architecture.md` → "Names
+  come only from the bundle") and posts the result to MAIN as an
+  `__adv`/`advisorFields` message, again on MAIN's `ready`.
+- `probe.js` [MAIN] has no names of its own: it arms nothing until discovery
+  sends the four fields. `__ADV.debug.discovered` says they arrived.
 
 **One trapped field may carry several markers, and that is load-bearing.**
 `I.armed` maps field → the markers listening on it, because discovery can hand
-back a name the SEED already armed for a *different* class — the four names come
+back a name already armed for a *different* class — the four names come
 out of one generator and share prefixes (`hpw_1` was `BattleUsers` in c4428a58;
-`lpw_1` is `BattleStatistics` today). Simply skipping an already-armed field
+`lpw_1` was `BattleStatistics` until 8f7f4827, and in 6a85fbcf it is the root
+Redux state's field). Simply skipping an already-armed field
 would drop that capture silently, so a crossed name **adds** its marker instead.
 A field owned by a *foreign* trap (combos, another extension) is still skipped —
-`__ADV.debug.skipped` counts those. `test_advisor_probe.js` guards all of it.
+`__ADV.debug.skipped` counts those. When newer names replace older ones (an
+old-version cache refreshed in the background), the marker a replaced field
+carried is removed, and a field left with no marker comes off
+`Object.prototype` (the rule for every feature: `architecture.md` → "Names come
+only from the bundle"). `test_advisor_probe.js` guards all of it.
 
 The invariant discovery leans on — ctor order == `toString` order, and the
-field counts (13/27/2/32) — held on 11/11 bundles (41560f11 … 8f7f4827);
+field counts (13/27/2/32) — held on 12/12 bundles (41560f11 … 6a85fbcf);
 `build/harnesses/test_advisor_discover.js` re-checks every bundle in
-`research/` and diffs the current build against the SEED.
+`research/`.
 
-| class | trap field (f1de53fa seed) | what it carries |
+| class | trap field (6a85fbcf) | what it carries |
 |---|---|---|
-| `BattleUsers` | `wq4_1` | the roster: `uids`, `teams`, `stats`, `gearScores`, `tankInfo`, `tankResistance`, `onlineUsers` |
-| `BattleStatistics` | `lpw_1` | `mapName`, `mode`, `battleFormat`, **`isReArmorEnabled`**, `scoreLimit`, `battleLoaded` |
-| `LocalBattleUserState` | `xq2_1` | **`weaponResistanceProperty`**, **`isReArmorTemporaryDisabled`** |
-| `User` | `kqi_1` | our own profile — `id` identifies "me", and from that, who is an enemy |
+| `BattleUsers` | `uqa_1` | the roster: `uids`, `teams`, `stats`, `gearScores`, `tankInfo`, `tankResistance`, `onlineUsers` |
+| `BattleStatistics` | `jq2_1` | `mapName`, `mode`, `battleFormat`, **`isReArmorEnabled`**, `scoreLimit`, `battleLoaded` |
+| `LocalBattleUserState` | `vq8_1` | **`weaponResistanceProperty`**, **`isReArmorTemporaryDisabled`** |
+| `User` | `wqo_1` | our own profile — `id` identifies "me", and from that, who is an enemy |
 
 Measured facts, each of which cost a round to learn:
 

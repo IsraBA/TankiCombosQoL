@@ -32,7 +32,7 @@ Content scripts can't use ES modules, so modules share namespace objects on
 
 | Namespace | World(s) | Holds |
 |---|---|---|
-| `window.TankiQoL` | ISOLATED (combos + advisor + HUD) + MAIN (translator, and the HUD's `HudElements`) | the shared components (`.Switch`, `.Select`, `.Drawer`, `.Button`, `.Slider`, `.Dialog`, `.Icons`), and in ISOLATED every combos, advisor and HUD module (`.DOM`, `.ViewRenderer`, `.GarageBridge`, `.AdvisorPanel`, `.HudEditor`, `.HudRecipes`, `.HudParse`, …) |
+| `window.TankiQoL` | ISOLATED (combos + advisor + HUD) + MAIN (translator, and the HUD's `HudElements`) | the shared components (`.Switch`, `.Select`, `.Drawer`, `.Button`, `.Slider`, `.Dialog`, `.Icons`), in ISOLATED the bundle pipeline every discovery runs on (`.Bundle`), and every combos, advisor and HUD module (`.DOM`, `.ViewRenderer`, `.GarageBridge`, `.AdvisorPanel`, `.HudEditor`, `.HudRecipes`, `.HudParse`, …) |
 | `window.__CT` | MAIN | translator internals: `.settings`, `.translate`, `.skip`, `.bidi`, `.rebuild()` |
 | `window.__CMB` | MAIN | garage hook: `.read()`, `.index()`, `.names()`, `.state()`, `.debug`, and `.internals` (shared by every `game/` file) |
 | `window.__ADV` | MAIN | advisor battle probe: `.debug`, `.raw()`, and `.internals` (shared by its `game/` files) |
@@ -46,19 +46,24 @@ JSON has no comments, so the reasoning lives here. **Do not merge these blocks.*
 | # | Contents | `run_at` | World | Why separate |
 |---|---|---|---|---|
 | 0 | **all CSS** | `document_start` | n/a | CSS is not world-scoped, so one block serves every feature. Early injection avoids a flash of unstyled injected UI. Array order = cascade order. |
-| 1 | translator `isolated/` | `document_start` | ISOLATED | The only place with `chrome.*`. Must start early so bundle discovery finishes before the user enters a battle. |
-| 2 | combos `discovery/` + `bridge/bridge.js` | `document_start` | ISOLATED | Same reason for the garage hook: discovery must finish before the garage opens. Also defines `TankiQoL.GarageBridge`, which block 5 uses. |
-| 3 | every combos `game/` file | `document_start` | MAIN | Needs the page's own `window` for the `Object.prototype` traps. Must be `document_start` — the state is built later, but the trap has to be armed first. |
-| 3a | advisor `recon/discover.js` + `recon/detect.js` | `document_start` | ISOLATED | The advisor's trap-field discovery — needs `chrome.storage` for its cache. Kept out of block 2 for the same removability reason as 3b. |
+| 1 | `shared/bundle.js` + translator `isolated/` | `document_start` | ISOLATED | The translator's only access to `chrome.*`. Must start early so its discovery is registered before the bundle URL appears. |
+| 2 | `shared/bundle.js` + combos `discovery/` + `bridge/bridge.js` | `document_start` | ISOLATED | Same reason for the garage hook: the names must reach MAIN before the lobby loads the garage. Also defines `TankiQoL.GarageBridge`, which block 5 uses. |
+| 3 | every combos `game/` file | `document_start` | MAIN | Needs the page's own `window` for the `Object.prototype` traps. Must be `document_start`: its listeners have to exist when the names arrive, and the traps are armed the moment they do — before the game builds what they catch. |
+| 3a | `shared/bundle.js` + advisor `recon/discover.js` + `recon/detect.js` | `document_start` | ISOLATED | The advisor's trap-field discovery — needs `chrome.storage` for its cache. Kept out of block 2 for the same removability reason as 3b. |
 | 3b | advisor `recon/game/` + `bridge/game/` | `document_start` | MAIN | Same trap technique for the battle state. Kept out of block 3 — a different feature must stay separately removable. |
 | 3c | HUD `model/elements.js` + `capture/game/` + `apply/game/` + `bridge/game/` | `document_start` | MAIN | Traps the HUD root and the battle settings, and shadows the two render methods — all of it must be armed before a battle builds its HUD. Within `apply/game/`, `overrides.js` and `push.js` come before `transform.js`, which calls them. Its own block for the same removability reason as 3a/3b. |
-| 3d | HUD `model/layout.js` + `discovery/` | `document_start` | ISOLATED | Reads this build's names, add sites and geometry out of the bundle and posts the names to 3c — early, for the same reason as block 2: the BattleSettings trap has to be on the right field before the game builds its settings. Defines `TankiQoL.HudRecipes`, which block 5 reads. `layout.js` comes first: the geometry is composed with it. |
+| 3d | `shared/bundle.js` + HUD `model/layout.js` + `discovery/` | `document_start` | ISOLATED | Reads this build's names, add sites and geometry out of the bundle and posts the names to 3c — early, for the same reason as block 2: the BattleSettings trap has to be on the right field before the game builds its settings. Defines `TankiQoL.HudRecipes`, which block 5 reads. `layout.js` comes first: the geometry is composed with it. |
 | 4 | translator `main/` | `document_start` | MAIN | Same, for the chat HUD. |
 | 5 | `shared/` + combos (DOM side) + advisor (model + view) + HUD (model, dom, editor) | `document_idle` | ISOLATED (default) | Pure DOM work that only makes sense once the page exists. Its internal order is the dependency chain below. The advisor loads after combos because it calls `InstantLoader`; the HUD editor loads last because it uses the shared components and combos' selectors. |
 
 `shared/components/switch.js` and `select.js` appear in **both** block 4 and
 block 5, and `features/hud/model/elements.js` in both block 3c and block 5. Not
 a mistake: JS worlds don't share a `window`, so each world needs its own copy.
+
+`shared/bundle.js` is the other way round: it heads all four discovery blocks
+(1, 2, 3a, 3d), which share **one** ISOLATED world. Listing it in each keeps every
+block removable on its own; the first copy defines `TankiQoL.Bundle` and the
+others return at once. Every `detect.js` registers its discovery with it.
 
 Blocks 2 and 5 are both combos and both ISOLATED but must stay separate: block 2
 is the bridge to the game's internals and has to be armed at `document_start`,
@@ -84,12 +89,13 @@ loads.** Within block 5 the order is:
    `stage_rules.js` before `stage.js`, drag, topbar, viewport, `editor_screen.js`,
    settings button; `main.js`
 
-Block 3d (the HUD discovery) is `layout.js`, then `read.js` — every other
-`HudParse` file destructures its helpers at load — then the readers, then
-`compose.js`, and `detect.js` last.
+Every discovery block starts with `shared/bundle.js`, which its `detect.js`
+registers with. Block 3d (the HUD discovery) is then `layout.js`, then `read.js`
+— every other `HudParse` file destructures its helpers at load — then the
+readers (`killlog.js` among them), then `compose.js`, and `detect.js` last.
 
-Block 3 (the MAIN-world files) ends with `discovery/game/boot.js`, which arms the
-traps once every other file has defined its half of `__CMB.internals`.
+Block 3 (the MAIN-world files) ends with `discovery/game/boot.js`, which tells
+ISOLATED that every listener is up. No trap is armed until the names arrive.
 
 ## Storage layout
 
@@ -104,14 +110,65 @@ a feature must not scatter loose generic keys into it.
 | `local` | `randomizerSettings` | combos | randomizer options object |
 | `local` | `whatsNewSeenVersion` | combos | the news version the user acknowledged |
 | `local` | `garageConstants:v<N>:<bundle url>` | combos | cached per-build discovery result |
+| `local` | `advisorFields:v<N>:<bundle url>` | advisor | cached per-build trap fields |
 | `local` | `hudLayout` | HUD editor | per-layout element preferences + the measured geometry (shape in `hud.md`) |
+| `local` | `hudGame:v<N>:<bundle url>` | HUD editor | cached per-build names + add sites (what MAIN gets) |
 | `local` | `hudRecipes:v<N>:<bundle url>` | HUD editor | cached per-build geometry discovery |
-| `local` | `hudConstants:<bundle url>` | translator | cached per-build discovery result |
+| `local` | `hudConstants:v<N>:<bundle url>` | translator | cached per-build discovery result |
 | `sync` | `translator` | translator | `{ enabled, showOriginal, targetLang }` |
+
+Every discovery cache entry is `{ext, data}`: the result, and the extension
+version that produced it. `shared/bundle.js` owns all of them (see "Names come
+only from the bundle" below). Each one keeps only the current build's key —
+older builds and older `v<N>` are removed when it runs.
 
 Combos data is larger and device-specific → `local`. Translator preferences are
 tiny and worth syncing across devices → `sync`. Different areas *and* different
 names, so no collision.
+
+## Names come only from the bundle
+
+**There is no minified name anywhere in the extension.** No seed, no "latest
+known build" fallback: every trap field, class and method name MAIN uses comes
+from discovery reading the live bundle. Until a feature's names arrive its MAIN
+side arms nothing and answers every request "not yet" (combos then falls back to
+the DOM path). `build/harnesses/test_no_names.js` fails if a `xx_1`-shaped
+literal or a `SEED` constant ever creeps back into the shipped code.
+
+That makes **how fast** the names arrive the whole game, so the four
+discoveries run on one pipeline, `shared/bundle.js`:
+
+- **One download.** The bundle is fetched once, however many discoveries need it.
+- **Priority = when the game builds the object.** The HUD's names go first
+  (`BattleSettings` is built while the game boots), then combos (the garage
+  proxy, built once when the lobby loads the garage), the advisor (the `User`, at
+  login), the translator (the chat HUD, per battle), and the HUD's geometry last
+  (only the editor needs it). Each result is posted before the next discovery
+  starts, so MAIN has it ~0.5 s after the download instead of after all ~2 s.
+- **Cache per build, refreshed per release.** A cache entry made by this
+  version of the extension is used as is — on every load but the first of a
+  build, the names reach MAIN within milliseconds, long before the game has run.
+  An entry made by an *older* version is posted at once too, then rediscovered in
+  the background and posted again only if it changed: an update that fixes an
+  anchor reaches every user, without making the first load after the update
+  wait for a cold discovery. (It happened that a fix did not reach users: the
+  HUD's tank roles on `6a85fbcf` were cached broken by the release before.)
+
+The cost is the very first load of a **new** build: the names arrive about half
+a second after the bundle is downloaded, and an object the game built before
+that is missed until it is built again — the HUD's `BattleSettings` until a
+battle setting changes, the garage proxy until the next reload. A reload fixes
+it, and from then on the cache answers first.
+
+**Replaced names come off `Object.prototype`.** When newer names replace older
+ones (an old-version cache refreshed in the background), each feature removes the
+traps it no longer uses — only if the descriptor there is still its own, and
+never a field the new names still use (a name can move to another role between
+builds; that field is re-armed for the new role). On another build a stale name
+belongs to some other class, possibly a hot one: on `6a85fbcf` an old advisor
+name landed on the root Redux state, rebuilt on every action. The four harnesses
+that load the MAIN hooks check it (`test_read_path.js`, `test_advisor_probe.js`,
+`test_hud_capture.js`, `test_translator_chat.js`).
 
 ## Source tree
 
@@ -135,10 +192,10 @@ features/combos/
 │   ├── send.js                #   the garage proxy, mount + select actions
 │   ├── actions.js             #   resistance / device / skin write actions
 │   ├── index.js               #   discover() = compose the above
-│   ├── detect.js              #   fetch the bundle, cache, send to MAIN
+│   ├── detect.js              #   register with shared/bundle.js, send the names to MAIN
 │   └── game/
-│       ├── names.js           #   seed names + debug counters + applyNames
-│       └── boot.js            #   arm the traps, announce ready (loads last)
+│       ├── names.js           #   the names discovery sent (none before) + debug counters
+│       └── boot.js            #   announce ready (loads last)
 │
 ├── bridge/                    # the pipe between the worlds
 │   ├── bridge.js              #   TankiQoL.GarageBridge — request/reply
@@ -199,6 +256,7 @@ features/combos/
     └── navigation_helpers.js  #   MutationObserver-based waiting
 
 shared/
+├── bundle.js                  # [ISOLATED] the live bundle for every discovery: fetch, cache, order
 ├── icons.js                   # SVG paths more than one feature draws
 └── components/                # drawer / switch / select / button / slider / dialog
     #   dialog.js is the game's modal chrome (danger = red, warning = yellow);
@@ -209,11 +267,11 @@ features/advisor/              # recommended protections — see advisor.md
 ├── main.js                    # starts the panel while the garage is on screen
 ├── recon/                     # the battle state — capture only, no output
 │   ├── discover.js            #   [ISOLATED] trap-field discovery from the bundle
-│   ├── detect.js              #   [ISOLATED] fetch + cache + send fields to MAIN
+│   ├── detect.js              #   [ISOLATED] register with shared/bundle.js, send fields to MAIN
 │   └── game/                  #   [MAIN]
 │       ├── report.js          #     parse the roster, rank turrets by kills
 │       ├── inventory.js       #     the account's protection modules + percentages
-│       └── probe.js           #     the four traps: SEED + discovered names
+│       └── probe.js           #     the four traps, on the discovered names
 ├── bridge/                    # its own pipe, tagged __adv
 │   ├── bridge.js              #   TankiQoL.AdvisorBridge
 │   └── game/bridge_main.js    #   [MAIN] answers {turrets, modules, flags}
@@ -239,7 +297,7 @@ features/hud/                  # the battle HUD editor — see hud.md
 features/translator/
 ├── isolated/                  # [ISOLATED] the only chrome.* access
 │   ├── bridge.js              #   storage sync + translate relay to the SW
-│   └── detect.js              #   parses the bundle -> HUD names
+│   └── detect.js              #   the chat HUD's names, via shared/bundle.js
 ├── main/                      # [MAIN]
 │   ├── settings.js            #   __CT.settings (subscribe/get/set)
 │   ├── skiplist.js            #   __CT.skip — no-translate slang

@@ -41,6 +41,7 @@
     {
       "matches": ["*://*.tankionline.com/*"],
       "js": [
+        "shared/bundle.js",
         "features/translator/isolated/bridge.js",
         "features/translator/isolated/detect.js"
       ],
@@ -50,6 +51,7 @@
     {
       "matches": ["*://*.tankionline.com/*"],
       "js": [
+        "shared/bundle.js",
         "features/combos/discovery/parse.js",
         "features/combos/discovery/state.js",
         "features/combos/discovery/send.js",
@@ -87,6 +89,7 @@
     {
       "matches": ["*://*.tankionline.com/*"],
       "js": [
+        "shared/bundle.js",
         "features/advisor/recon/discover.js",
         "features/advisor/recon/detect.js"
       ],
@@ -126,6 +129,7 @@
     {
       "matches": ["*://*.tankionline.com/*"],
       "js": [
+        "shared/bundle.js",
         "features/hud/model/layout.js",
         "features/hud/discovery/read.js",
         "features/hud/discovery/engine.js",
@@ -136,6 +140,7 @@
         "features/hud/discovery/abilities.js",
         "features/hud/discovery/supplies.js",
         "features/hud/discovery/texts.js",
+        "features/hud/discovery/killlog.js",
         "features/hud/discovery/assets.js",
         "features/hud/discovery/compose.js",
         "features/hud/discovery/detect.js"

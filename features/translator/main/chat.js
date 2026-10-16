@@ -17,13 +17,8 @@
   const LOADER_FRAMES = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
   const LOADER_INTERVAL_MS = 80;
 
-  // Seed for the latest known build (009aa16b); detect.js overrides it
-  let D = {
-    helper: 'v$', cls: 'MAn', appendFn: 'kAn', finalizeFn: 'yAn',
-    offset: 'k1fr_1', ySub: 'o4r_1', zSub: 'p4r_1',
-    count: 'i1fr_1', ptr: 'j1fr_1', evict: 'q1fr',
-    renderMethods: ['n1fr', 'p1fr', 'm1fr', 'o1fr'],
-  };
+  // אין שמות מראש: detect.js שולח אותם, ועד אז שום מלכודת
+  let D = null;
 
   // ---- live settings snapshot ----------------------------------------
   let S = { enabled: true, showOriginal: false, targetLang: 'en', ready: false };
@@ -240,32 +235,45 @@
 
   // ---- Object.prototype trap to grab the HUD on construction ----------
   // Re-captures on every new HUD, because each battle builds a fresh one
-  const armed = new Set();
+  const armed = new Map();   // שדה -> ה-setter שלו
   function armTrap(prop) {
     if (!prop || armed.has(prop)) return;
-    armed.add(prop);
+    const set = function (v) {
+      Object.defineProperty(this, prop, {
+        value: v, writable: true, configurable: true, enumerable: true,
+      });
+      if (this !== W.__CT_HUD && looksLikeHud(this)) {
+        try { captureHud(this); } catch (e) { W.__CT_DEBUG.lastError = String(e); }
+      }
+    };
+    armed.set(prop, set);
     try {
       Object.defineProperty(W.Object.prototype, prop, {
         configurable: true, enumerable: false,
         get() { return undefined; },
-        set(v) {
-          Object.defineProperty(this, prop, {
-            value: v, writable: true, configurable: true, enumerable: true,
-          });
-          if (this !== W.__CT_HUD && looksLikeHud(this)) {
-            try { captureHud(this); } catch (e) { W.__CT_DEBUG.lastError = String(e); }
-          }
-        },
+        set,
       });
     } catch (e) { W.__CT_DEBUG.lastError = String(e); }
   }
 
+  // יוצא מ-Object.prototype, אם המלכודת עדיין שלנו
+  function disarm(prop) {
+    const set = armed.get(prop);
+    if (!set) return;
+    armed.delete(prop);
+    const d = Object.getOwnPropertyDescriptor(W.Object.prototype, prop);
+    if (d && d.set === set) delete W.Object.prototype[prop];
+  }
+
   // ---- discovered names from detect.js -------------------------------
   function applyNames(d) {
+    const was = D && D.offset;
     D = d;
     W.__CT_DEBUG.names = d;
     W.__CT_DEBUG.discovered = true;
-    armTrap(d.offset);   // arm the discovered offset field too
+    armTrap(d.offset);   // המלכודת היחידה: שדה ה-offset שהתגלה
+    // שם קודם (מטמון ישן) שייך בבילד הזה למחלקה זרה, אולי חמה
+    if (was && was !== d.offset) disarm(was);
   }
 
   window.addEventListener('message', (e) => {
@@ -319,7 +327,4 @@
     };
     return s;
   };
-
-  // ---- boot -----------------------------------------------------------
-  armTrap(D.offset);   // instant coverage with the seeded (latest-known) names
 })();

@@ -35,8 +35,16 @@
       'var n=new [\\w$]+\\([^,]*,this\\.' + escapeRe(hashField[1]) + ',this\\.\\3\\)').exec(src);
     if (!sm) return null;
     out.proxyMountMethod = sm[1];
+    // השם חוזר במודולים אחרים: רק מתודות ששולחות hash מה-ctor
+    const hashFields = [...ctorBody.matchAll(/this\.([\w$]+_1)=new [\w$]+\(-?\d+,\s*-?\d+\)/g)]
+      .map((m) => 'this.' + m[1] + ',');
     out.proxyMethods = [...src.matchAll(new RegExp(
-      '[\\w$]+\\(' + escapeRe(proxyClass) + '\\)\\.([\\w$]+)=function', 'g'))].map((m) => m[1]);
+      '[\\w$]+\\(' + escapeRe(proxyClass) + '\\)\\.([\\w$]+)=function\\([^)]*\\)\\{', 'g'))]
+      .filter((m) => {
+        const body = src.slice(m.index, src.indexOf('}', m.index + m[0].length));
+        return hashFields.some((f) => body.includes(f));
+      })
+      .map((m) => m[1]);
 
     // השדה שמקשר את ה-proxy לקונטרולר של המוסך (שמחזיק את ה-store)
     const back = new RegExp('=[\\w$]+\\([\\w$]+\\(' + escapeRe(proxyClass) + '\\)\\),' +

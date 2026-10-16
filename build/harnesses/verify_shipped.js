@@ -1,5 +1,5 @@
-// מריץ את discover() המשוגר מול כל הבאנדלים, ומוודא שהתוצאה לבילד הנוכחי
-// תואמת ל-SEED שב-garage/names.js.
+// מריץ את discover() המשוגר מול כל הבאנדלים, ומוודא שכל שם שהתוסף צריך נמצא.
+// לתוסף אין שמות מראש: מה שלא נמצא כאן לא יעבוד במשחק.
 
 const fs = require("fs");
 const path = require("path");
@@ -33,21 +33,6 @@ const discover = vm.runInContext(
 
 const REQUIRED_STATE = ["mountedItems", "items", "isLoaded", "currentCategory"];
 const REQUIRED_ITEM = ["id", "name", "category", "mounted", "mountIndex"];
-
-// ה-SEED מתוך garage/names.js
-const stateSrc = fs.readFileSync(
-  path.join(EXT, "features/combos/discovery/game/names.js"),
-  "utf8",
-);
-const seedStart = stateSrc.indexOf("const SEED = {");
-const seed = eval(
-  "(" +
-    stateSrc.slice(
-      stateSrc.indexOf("{", seedStart),
-      stateSrc.indexOf("\n  };", seedStart) + 4,
-    ) +
-    ")",
-);
 
 // השדות שאנחנו מצפים לקבל, כולל התוספות
 const EXTRAS = {
@@ -152,6 +137,12 @@ for (const b of fs
   });
   if (r.proxyMethods && r.proxyMethods.length < 2)
     problems.push("proxyMethods too few");
+  // מתודה של מחלקה זרה באותו שם מפילה את looksLikeProxy: אחת לכל hash ב-ctor
+  const ctorAt = src.lastIndexOf("function ", src.indexOf("595500642"));
+  const ctorSrc = src.slice(ctorAt, src.indexOf("}", ctorAt) + 1);
+  const hashes = (ctorSrc.match(/=new [\w$]+\(-?\d+,\s*-?\d+\)/g) || []).length;
+  if (!r.proxyMethods || r.proxyMethods.length !== hashes || !r.proxyMethods.includes(r.proxyMountMethod))
+    problems.push(`proxyMethods ${r.proxyMethods && r.proxyMethods.join(",")} != the ${hashes} commands of the proxy ctor`);
 
   const ok = problems.length === 0;
   console.log(
@@ -166,60 +157,6 @@ for (const b of fs
   );
   if (problems.length) console.log("       problems:", problems.join(", "));
   ok ? pass++ : fail++;
-
-  if (b === "main.f1de53fa.js") {
-    const mismatches = [];
-    const cmp = (label, a, c) => {
-      if (a !== c) mismatches.push(`${label}: seed=${a} real=${c}`);
-    };
-    [
-      "trapField",
-      "urlMethod",
-      "maxLevelMethod",
-      "proxyTrapField",
-      "proxyMountMethod",
-      "proxyCcField",
-      "mountActionClass",
-      "selectActionClass",
-      "selectItemIdField",
-      "resistApplyClass",
-      "resistUnmountClass",
-      "resistMountClass",
-      "mountThunkClass",
-      "deviceInsertClass",
-      "deviceRemoveClass",
-      "deviceLoadClass",
-      "skinMountClass",
-    ].forEach((k) => cmp(k, seed[k], r[k]));
-    cmp(
-      "proxyMethods",
-      (seed.proxyMethods || []).join(","),
-      (r.proxyMethods || []).join(","),
-    );
-    for (const k of Object.keys(seed.stateFields))
-      cmp("state." + k, seed.stateFields[k], r.stateFields[k]);
-    for (const k of Object.keys(seed.itemFields))
-      cmp("item." + k, seed.itemFields[k], r.itemFields[k]);
-    for (const grp of [
-      "modificationFields",
-      "upgradeFields",
-      "deviceFields",
-      "resistApplyFields",
-      "resistUnmountFields",
-      "resistMountFields",
-      "mountThunkFields",
-      "deviceInsertFields",
-      "deviceRemoveFields",
-      "deviceLoadFields",
-      "skinMountFields",
-    ]) {
-      for (const k of Object.keys(seed[grp] || {}))
-        cmp(grp + "." + k, seed[grp][k], (r[grp] || {})[k]);
-    }
-    console.log(
-      `       SEED matches this build: ${mismatches.length ? "NO !!" : "YES"}`,
-    );
-    mismatches.forEach((x) => console.log("         " + x));
-  }
 }
 console.log(`\n${pass} passed, ${fail} failed`);
+process.exit(fail ? 1 : 0);

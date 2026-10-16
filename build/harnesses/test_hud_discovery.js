@@ -11,7 +11,7 @@ const EXT =
 const RESEARCH = "c:/Users/User/Documents/programming/Tanki Extensions/research";
 const BUNDLE = "main.7f05e212.js";
 const FILES = ["features/hud/model/layout.js"].concat(
-  ["read", "engine", "roles", "modules", "strategies", "tank", "abilities", "supplies", "texts", "assets", "compose"]
+  ["read", "engine", "roles", "modules", "strategies", "tank", "abilities", "supplies", "texts", "killlog", "assets", "compose"]
     .map((f) => "features/hud/discovery/" + f + ".js"));
 
 let failures = 0;
@@ -58,7 +58,7 @@ const VIEW = { w: 1864, h: 916, scale: 0.8484875 };
 
 // תיבה לוגית ומלבן פיקסלים מתוך מתכון, כמו שהעורך עושה
 function replay(recipe) {
-  const box = Q.HudLayout.compose(recipe, VIEW.w, VIEW.h);
+  const box = Q.HudLayout.compose(recipe, VIEW.w, VIEW.h, VIEW.scale);
   const px = Q.HudLayout.toPixels(box, recipe, VIEW.scale, VIEW.w, VIEW.h);
   return { box, px };
 }
@@ -287,12 +287,32 @@ ok("…and the centered supply row likewise",
   got.layouts.centered.supplies.h === 44);
 
 console.log("       discovered from the bundle: " + got.covered.join(", "));
-for (const id of ["radar", "bars", "effects", "chat", "status", "overdrive", "grenades", "supplies"]) {
+for (const id of ["radar", "bars", "effects", "chat", "status", "overdrive", "grenades", "supplies", "killLog"]) {
   ok("'" + id + "' comes from the game's own literals", got.covered.includes(id));
 }
-// יומן הקרב לוקח את שטחו מקונטיינר ה-HTML ולא מקבועים
-ok("the kill log is the one element that is knowingly not derivable",
-  !got.covered.includes("killLog"));
+
+// ---- יומן ההריגות ----
+
+// האזור: שברי מסך קבועים מעוזר ה-DESKTOP; הצומת מוצמד לימין, וגודלו חלקי קנה המידה
+const kl = got.layouts.default.killLog;
+ok("the kill log is the area 0.7..0.98 across and 0.2..0.5 down, on the node-fraction strategy",
+  !!kl && kl.k === "ey" && kl.a[0] === 1 && kl.a[1] === 0 && kl.wf === 0.28 && kl.hf === 0.3 &&
+  kl.x.op === "right" && kl.x.frac === -0.02 && kl.y.op === "top" && kl.y.frac === 0.2);
+// המדידה החיה של המפתח (model/seed.js): l ו-px
+const klr = kl && replay(kl);
+ok("replayed on the measured screen it is the measured logical box",
+  !!klr && [klr.box.x, klr.box.y, klr.box.w, klr.box.h].every((v, i) =>
+    Math.abs(v - [1211.601922243993, 183.2, 615.1180777560071, 323.87041647637705][i]) < 0.001));
+ok("…and the measured pixel rect",
+  !!klr && [klr.px.x, klr.px.y, klr.px.w, klr.px.h].every((v, i) =>
+    Math.abs(v - [1304.8, 183.2, 521.92, 274.8][i]) < 0.001));
+// האזור הוא בקואורדינטות חלון: קנה המידה לא מזיז אותו
+const klBig = kl && Q.HudLayout.place(kl, { w: 1920, h: 1080, scale: 1.5 });
+ok("at any UI scale it covers exactly that area of the window",
+  !!klBig && Math.abs(klBig.x - 0.7) < 1e-9 && Math.abs(klBig.y - 0.2) < 1e-9 &&
+  Math.abs(klBig.w - 0.28) < 1e-9 && Math.abs(klBig.h - 0.3) < 1e-9);
+ok("…and both layouts share it, as the one layout method does",
+  JSON.stringify(kl) === JSON.stringify(got.layouts.centered.killLog));
 
 console.log(failures ? `\n${failures} check(s) FAILED` : "\nall checks passed");
 process.exit(failures ? 1 : 0);

@@ -41,8 +41,8 @@ __HUD.measure();   // the geometry record the editor replays (also pushed automa
 __HUD.seed();      // the same record as a line to paste into features/hud/model/seed.js
 __HUD.overrides(); // the preferences currently applied, as they arrived from storage
 __HUD.debug;       // {captures, adds, removes, settingsCaptures, serviceCaptures,
-//  layoutCalls, renderCalls, measures, names: "seed"|"bundle", lastError}
-__HUD.internals.N; // the minified names in use (seed, or this build's)
+//  layoutCalls, renderCalls, measures, names: null|"bundle", lastError}
+__HUD.internals.N; // the minified names in use — all null until discovery answers
 
 // HUD editor — ISOLATED side
 TankiQoL.HudStore.get();          // the whole stored object
@@ -96,13 +96,14 @@ own console context instead.
 | the 3D tank is blank / won't drag while the combos view is open           | a preview host ended up `display:none` — look for an inline `display:none` on `PREVIEW_HOSTS` **without** `data-cme-preview-hidden`, which means something outside `keepTankPreviewAlive` hid it |
 | the advisor block never appears in the protection tab                     | check `__ADV.raw()`: `battle` not loaded (no battle), the equip cooldown is active, or no module passes the 30% bar. `__ADV.debug` counters at 0 mean the traps never fired — a new build rotated the field names AND discovery failed: `discovered === false` means `recon/detect.js` never delivered (fetch failed, or `discover()` returned null — run `test_advisor_discover.js` on the new bundle) |
 | advisor slots show item boxes instead of the small turret icons           | the icon harvest from the game's list found nothing (virtualised list?) and the fallback images are in use — cosmetic, `panel_render.js` `harvestIcons`                                          |
-| the HUD editor's screen is empty ("enter a battle once")                  | no geometry at all: discovery returned nothing (`TankiQoL.HudRecipes.get()` is `null` — run `test_hud_builds.js` on the new bundle) **and** neither the seed nor a measurement covers this layout |
-| the HUD editor shows some elements but not others                         | `TankiQoL.HudRecipes.get().covered` lists what discovery read; the rest come from the seed or a battle measurement. The kill log is measurement-only by design. A missing canvas element means its extractor in `discovery/` stopped matching |
+| the HUD editor's screen is empty ("enter a battle once")                  | no geometry at all: discovery returned nothing (`TankiQoL.HudRecipes.get()` is `null` — run `test_hud_builds.js` on the new bundle) **and** neither the geometry seed (`model/seed.js`) nor a measurement covers this layout |
+| the HUD editor shows some elements but not others                         | `TankiQoL.HudRecipes.get().covered` lists what discovery read; the rest come from the geometry seed (`model/seed.js`) or a battle measurement. A missing canvas element means its extractor in `discovery/` stopped matching |
 | another extension's battle-HUD tweaks stop working (e.g. Tanki Tweaks' Tab table turns half-transparent) | something of ours put a game class name of the battle HUD on the page — they watch the document for them. The hidden copy must use `HudDomCatalog.ghostClass` names only (`cme_` + the game's name) |
-| nothing moves in battle although the editor saved it                      | `__HUD.nodes()` — if `role` is `null` everywhere, the add-site table is wrong for this build. `__HUD.debug.names === "seed"` on a new build means discovery never delivered: check `TankiQoL.HudRecipes.get()` (null = `engine.js` failed), and run `test_hud_builds.js` with the new bundle in `research/` — it names the anchor that broke |
+| nothing moves in battle although the editor saved it                      | `__HUD.nodes()` — if `role` is `null` everywhere, the add-site table is wrong for this build. `__HUD.debug.names === null` means discovery never delivered: nothing is trapped at all. Check `TankiQoL.HudRecipes.get()` (null = `engine.js` failed), and run `test_hud_builds.js` with the new bundle in `research/` — it names the anchor that broke |
 | an element jitters or drifts every frame                                   | a layout pass is being transformed: `__HUD.debug.layoutCalls` should climb while `renderCalls` climbs too. A new element type whose `o4o` was not wrapped will do this                            |
 | `__CT_DEBUG.discovered === false` after a few seconds                     | `detect.js` couldn't parse the bundle — see the recovery procedure in `translator.md`                                                                                                            |
-| `__CT_HUD === null` after entering a battle                               | the trap never validated: the offset field name is wrong                                                                                                                                         |
+| `__CT_HUD === null` after entering a battle                               | `__CT_STATE().names === null` = the names never arrived (see the row above); otherwise the trap never validated: the offset field name is wrong |
+| native equipping does nothing on the first load after a game update, fine after a reload | expected, not a bug: the names arrived after the game built the garage proxy (`__CMB.debug.proxyCaptured === false`). The extension has no names of its own — see `architecture.md` → "Names come only from the bundle" |
 | translations missing but `intercepts` climbing                            | check `__CT_DEBUG.lastError` — likely the service-worker fetch failed                                                                                                                            |
 
 ## Offline harnesses
@@ -110,22 +111,43 @@ own console context instead.
 There is no test framework here. What exists is **`build/harnesses/`** — plain
 `node <file>` scripts, no dependencies, that run the _shipped_ code offline
 against the bundles in `../../../research/`. They live under `build/`, so they
-never reach the store zip. ~600 checks across 24 files (plus `fake_dom.js`, a
-shared minimal DOM the UI harnesses build real elements in):
+never reach the store zip. ~880 checks across 28 files (plus two helpers:
+`fake_dom.js`, a shared minimal DOM the UI harnesses build real elements in, and
+`game_names.js`, which runs the shipped discovery on the newest bundle — the
+extension has no names of its own, so the sandbox harnesses get theirs the same
+way the extension does):
 
+- **`test_no_names.js`** — the extension carries **no** minified game name: no
+  `xx_1`-shaped string literal and no `SEED` constant anywhere in `features/` or
+  `shared/`. Everything comes from discovery at run time.
+- **`test_bundle.js`** — `shared/bundle.js` as shipped: one download for every
+  discovery, published in priority order with each result out before the next
+  starts, a cache of this version used as is, an older version's cache posted at
+  once and refreshed in the background, a throwing discovery not stopping the
+  others, and old keys removed.
 - **`verify_shipped.js`** — loads `discovery/*.js` as shipped, runs
-  `discover()` against every bundle in `research/`, and diffs the result for the
-  current build against the seed in `discovery/game/names.js`. A stale seed or a
-  broken regex fails loudly instead of silently degrading in-game. **Run it after
-  any change to discovery, and bump `CACHE_VERSION` when the output shape
-  changes.**
+  `discover()` against every bundle in `research/`, and checks every name the
+  MAIN side reads was found — with no names of its own, a name missing here is a
+  feature dead in the game. It also checks the garage proxy's method list is
+  exactly one method per command hash in its ctor (a class name reused by
+  another module once smuggled that module's methods in). A broken regex fails
+  loudly instead of silently degrading in-game. **Run it after any change to
+  discovery, and bump `CACHE_VERSION` when the output shape changes.**
+- **`test_translator_discover.js`** — the translator's twin of the above:
+  `isolated/detect.js` as shipped, on every bundle.
+- **`test_translator_chat.js`** — `main/chat.js` in a sandbox against a fake chat
+  HUD: no trap before the names arrive, the trap captures it, a message through a
+  render method is recorded, and newer names replace the trap — the old one comes
+  off `Object.prototype`, unless a foreign trap has taken the field since.
 - **`test_write_path.js`** — loads every MAIN-world `game/` file into a `vm` sandbox
   with a fake store and state, then asserts which actions each write dispatches:
   the protection set-diff, augment ownership rejection, skins. The write logic is
   tested without touching the game.
-- **`test_read_path.js`** — the same sandbox, the other direction: `readCombo`
-  and `readIndex` over a fake state, and the bridge end to end — the `ready`
-  handshake, a request in and the matching reply out.
+- **`test_read_path.js`** — the same sandbox, the other direction: no names and
+  no trap before discovery (and a request then is answered "not yet" at once),
+  `readCombo` and `readIndex` over a fake state, the bridge end to end — the
+  `ready` handshake, a request in and the matching reply out — and newer names
+  replacing older ones, including one that moved to another role.
 - **`test_migrator.js`**, **`test_instant_loader.js`**, **`test_instant_saver.js`**,
   **`test_card_render.js`**, **`test_protection_equal.js`**,
   **`test_equip_entry.js`**, **`test_random_draw.js`**,
@@ -135,17 +157,16 @@ shared minimal DOM the UI harnesses build real elements in):
   generations, what clicking a card does end to end, and the Enter-shortcut
   guard that once saved ghost combos from battle chat).
 - **`test_advisor_discover.js`** — the advisor's trap-field discovery
-  (`recon/discover.js` as shipped) against every bundle in `research/`, plus a
-  diff of the current build against the `SEED` in `recon/game/probe.js`. The
-  advisor's twin of `verify_shipped.js` — run it (and refresh the SEED) when a
-  new bundle lands.
-- **`test_advisor_probe.js`** — `probe.js` in a sandbox: the SEED captures
-  immediately, discovered names arm on arrival, a stranger class on a trapped
+  (`recon/discover.js` as shipped) against every bundle in `research/`. The
+  advisor's twin of `verify_shipped.js` — run it when a new bundle lands.
+- **`test_advisor_probe.js`** — `probe.js` in a sandbox: nothing armed before
+  discovery, discovered names arm on arrival, a stranger class on a trapped
   field is ignored, malformed names are refused, and a field owned by a foreign
-  trap is left alone. Its real target is the **crossed-name** case — discovery
-  handing a field the SEED already armed for a *different* class. The names come
-  from one generator (`hpw_1` was `BattleUsers` in c4428a58, `lpw_1` is
-  `BattleStatistics` today), so the crossing is plausible, and skipping an
+  trap is left alone. Its real target is the **crossed-name** case — newer names
+  handing a field already armed for a *different* class. The names come
+  from one generator (`hpw_1` was `BattleUsers` in c4428a58; `lpw_1` was
+  `BattleStatistics` until 8f7f4827 and the root Redux state's field in
+  6a85fbcf), so the crossing is plausible, and skipping an
   already-armed field would kill that capture with no error anywhere.
 - **`test_advisor_recommend.js`** — the advisor's pure model on invented
   battles: Armadillo's slot, the 30% bar, ownership, unknown turrets, the
@@ -165,13 +186,12 @@ shared minimal DOM the UI harnesses build real elements in):
 - **`test_hud_builds.js`** — the whole HUD discovery on **every** bundle in
   `research/`: every name MAIN needs, one add site per element (five for the
   status), the full geometry, identical across builds; `7f05e212` and
-  `f1de53fa` against the offsets measured live, and the latest bundle against
-  the seed in `capture/game/names.js`. ~17 s. Drop a new bundle in `research/`
-  and run it before anything else.
+  `f1de53fa` against the offsets measured live, and `names.js` carrying no
+  names. ~17 s. Drop a new bundle in `research/` and run it before anything else.
 - **`test_hud_discovery.js`** — the geometry parser against the **real bundle**
   in `research/`: the four scaling strategies are identified, the recipes for
-  the radar, bars, effects, chat, status, overdrive, grenades and supplies come
-  out of the game's own literals, the SVG URLs and the rank image resolve, and
+  the radar, bars, effects, chat, status, overdrive, grenades, supplies and the
+  kill log come out of the game's own literals, the SVG URLs and the rank image resolve, and
   the measured ones **reproduce the developer's live measurement** — logical box and
   pixel rect, to a hundredth of a pixel, in both layouts. It is the check that
   ties the static read to what the game actually draws; if a new build moves the
@@ -179,14 +199,16 @@ shared minimal DOM the UI harnesses build real elements in):
 - **`test_hud_model.js`**, **`test_hud_capture.js`**, **`test_hud_editor.js`** —
   the HUD editor in three layers. The model one is pure geometry: the same
   preference replayed on another resolution and another UI scale. The capture
-  one builds a **fake engine** in a `vm` sandbox — scene nodes, a scaling
+  one builds a **fake engine** in a `vm` sandbox, on the names discovery finds in
+  the newest bundle — scene nodes, a scaling
   strategy, a HUD root whose ctor writes the trapped field last — and proves
   the whole MAIN side on it: the traps fire, two elements added by the same
   one-line function share an offset while different adders differ, the supply
   row splits by screen side, the transform moves/scales/fades only the element
   it was given, a draw inside a layout pass is left alone, and the bridge
-  answers — and that a new build's names (`hudGame`) re-arm the traps on the
-  new fields, while a partial set is ignored. The editor one drives the stage
+  answers — that nothing is trapped before the names arrive, and that newer
+  names (`hudGame`) re-arm the traps on the new fields and drop the old ones,
+  while a partial set is ignored. The editor one drives the stage
   over the fake DOM: drag, the 5 px click threshold, snapping, overlap refusal,
   edge clamping, locked elements, the push, undo and reset.
 - **`test_hud_dom.js`** — the HTML elements and the chat's opacity, on a fake
@@ -206,3 +228,36 @@ shared minimal DOM the UI harnesses build real elements in):
 They hold **absolute paths** to this repo and to `research/`, so they run from
 anywhere but break if either moves. When you split or move a source file, update
 the file list at the top of the harness that loads it.
+
+## When the game ships a new build
+
+Every update renames every minified name; whether anything *breaks* depends on
+whether an anchor moved. The extension has no names of its own, so a broken
+anchor means that feature is off in the game. The order that worked for
+`6a85fbcf`:
+
+1. **Get the bundle.** In the game tab: `copy(Array.from(document.scripts).find((s)
+   => /main\.[a-f0-9]+\.js/.test(s.src)).src)`, download it into
+   `../../../research/` as `main.<hash>.js`. The harnesses treat the newest file
+   there (by date) as the live build.
+2. **See what changed**: `node ../../../research/bundle_diff.js main.<old>.js
+   main.<new>.js` (run from `research/`). It compares the two with every
+   identifier blanked out and lists the string literals in the code that really
+   changed. A routine build changes a few dozen chunks; `6a85fbcf` changed about
+   2,100 (battle effects, battle creation, parachutes, the tank HUD).
+3. **Run every harness**, the bundle ones first (`test_hud_builds.js`,
+   `verify_shipped.js`, `test_advisor_discover.js`,
+   `test_translator_discover.js`). Each names the anchor or the element that
+   broke.
+4. **A harness passing is not the end.** They check that a name was found and,
+   where they can, that it means the right thing — not every assumption the MAIN
+   side makes. For each feature, compare the code the extension relies on in the
+   old and the new bundle (`bundle_diff.js` writes the changed chunks with
+   `outPrefix`), and read the MAIN files' assumptions against it.
+5. **Fix the anchor so it holds on all the bundles** in `research/`, not only the
+   new one (conventions.md → "Game names and discovery anchors"); add the check
+   that would have caught it and watch it fail on the old code.
+6. **Bump `CACHE_VERSION`** only if an output shape changed; values reach users on
+   the next release by themselves. Then the usual end of round, and the manual
+   pass in `store.md` — once with a fresh profile (cold cache) and once after a
+   reload.

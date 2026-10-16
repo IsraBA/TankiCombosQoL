@@ -30,6 +30,8 @@ for (const f of FILES) {
     filename: f.split("/").pop(),
   });
 }
+// לתוסף אין שמות מראש: מה שהגילוי מוצא בבאנדל החדש ביותר
+vm.runInContext("__CMB.internals.applyNames(" + JSON.stringify(require("./game_names").garage()) + ")", ctx);
 
 // --- מצב מזויף שנבנה סביב הפילטרים ---
 const setup = `

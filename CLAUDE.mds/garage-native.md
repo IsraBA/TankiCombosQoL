@@ -64,7 +64,7 @@ fast beats piling requests up), 5 s for a draw (it waits on device catalogs) and
 ## The model
 
 The garage is a **Redux-style store**: one `Garage` state object holding
-`mountedItems`, `items`, `devices` and ~26 more fields. Every item is a
+`mountedItems`, `items`, `devices` and ~28 more fields. Every item is a
 `GarageItem` carrying `id`, `name`, `category`, `preview`, `owned`, **`mounted`**
 and **`mountIndex`**. So the current combo is simply every item with
 `mounted === true` grouped by `category` — the same selection the game's own code
@@ -292,30 +292,31 @@ inferring it from code shape. Anchors:
   as much as the fields: the reducer branches on `instanceof`.
 - **the garage proxy and the mount/select actions** (`discovery/send.js`) anchor
   on the `mountItem` command hash — derived from the command name, so
-  build-stable, and `verify_shipped.js` resolves it on every bundle.
+  build-stable, and `verify_shipped.js` resolves it on every bundle. Its method
+  list is the methods that send one of the ctor's own command hashes (see "The
+  proxy's class name is not unique" below).
 
 Everything after the core four is **optional**: if one anchor breaks, discovery
 still succeeds and only that column goes blank, rather than the whole feature
 going inert.
 
-Cached in `chrome.storage.local` keyed by **schema version + bundle URL**
-(`garageConstants:v<N>:<url>`). The version exists because of a real bug: adding
-fields to `discover()`'s output while an old-schema result was cached meant the
-cache loaded as-is and **overrode the seed** (which did have the new fields), so
-every new column silently read null. **Bump `CACHE_VERSION` in `discovery/detect.js`
-whenever `discover()`'s output shape changes** (currently 11 — v10 cached a
-f1de53fa result missing `maxLevelMethod`, from before the `>=` fix, so the bump
-also flushes a wrong cache). Stale-prefix keys
-are cleaned up on startup. `discovery/game/names.js` seeds the latest-known build so
-the hook works during the discovery fetch; discovery overrides it.
+Cached by `shared/bundle.js` as `garageConstants:v<N>:<url>` (the pipeline,
+its ordering and its refresh: `architecture.md` → "Names come only from the
+bundle"). **Bump `CACHE_VERSION` in `discovery/detect.js` whenever `discover()`'s
+output shape changes** (currently 12): an entry of an older shape would be
+posted to MAIN first, and every field it lacks would read null until the
+background refresh replaces it. There are no names in `discovery/game/names.js`:
+`I.D` is `null` until discovery answers, and until then the bridge answers every
+request "not yet" — saving saves nothing, equipping takes the DOM path.
 
-**Verified on all 11 bundles in `../../../research/`:**
+**Verified on all 12 bundles in `../../../research/`:**
 
 | build | trap field | mountedItems | mounted | mountIndex |
 |---|---|---|---|---|
+| 6a85fbcf | `yq6_1` | `wq5_1` | `kra_1` | `lra_1` |
 | 8f7f4827 | `aq1_1` | `ypz_1` | `yr3_1` | `zr3_1` |
 | 7f05e212 | `aq1_1` | `ypz_1` | `yr3_1` | `zr3_1` |
-| f1de53fa (seed) | `aq1_1` | `ypz_1` | `yr3_1` | `zr3_1` |
+| f1de53fa | `aq1_1` | `ypz_1` | `yr3_1` | `zr3_1` |
 | 1327298e | `vq0_1` | `vpz_1` | `tr3_1` | `ur3_1` |
 | 009aa16b | `oq0_1` | `opz_1` | `lr3_1` | `mr3_1` |
 | c0feea5a | `gpz_1` | `gpy_1` | `dr2_1` | `er2_1` |
@@ -325,8 +326,26 @@ the hook works during the discovery fetch; discovery overrides it.
 | e76a162c | `upr_1` | `upq_1` | `rqu_1` | `squ_1` |
 | 41560f11 | `qq7_1` | `qq6_1` | `nra_1` | `ora_1` |
 
-The state class has had exactly 29 fields in every build checked. Re-verify after
-**any** change to discovery — see the harness section in `debugging.md`.
+The state class had 29 fields up to `1327298e` and 31 from `f1de53fa`
+(`upgradeCoolDownEndTimes`, `upgradeItemInProcessingId`); the trap is still its
+last field. Re-verify after **any** change to discovery — see the harness section
+in `debugging.md`.
+
+**The proxy is the one capture that can be missed.** It is created once per
+garage object load, and its trap only fires if it is armed on the right name
+*before* that. With a warm cache the names reach MAIN within milliseconds; on
+the first load of a new build they arrive about half a second after the bundle
+download, and if the game created the proxy before that, native equipping stays
+off until the next reload (the DOM path still works). Not measured live — the
+lobby already renders garage items, so the garage object may load that early.
+
+**The proxy's class name is not unique in the bundle.** Kotlin reuses minified
+names across webpack modules, and on six of the twelve builds another module's
+class shared the proxy's name. Collecting every `H(<proxy>).m=function` then
+listed its methods too, and `looksLikeProxy` — which requires all of them on the
+captured prototype — would never have matched. `proxyMethods` keeps only the
+methods that send one of the proxy ctor's own command hashes, and the harness
+checks there is exactly one per hash.
 
 ## Behaviours not to regress
 

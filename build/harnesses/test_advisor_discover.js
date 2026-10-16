@@ -1,5 +1,5 @@
 // מריץ את גילוי שדות הקרב של ה-advisor מול כל הבאנדלים,
-// ומוודא שהתוצאה לבילד הנוכחי תואמת ל-SEED שב-probe.js.
+// ומוודא שכל ארבעת השדות נמצאים — לתוסף אין שמות מראש.
 
 const fs = require("fs");
 const path = require("path");
@@ -8,7 +8,6 @@ const vm = require("vm");
 const EXT =
   "c:/Users/User/Documents/programming/Tanki Extensions/Combos Extension/TankiCombosQoL";
 const DIR = "c:/Users/User/Documents/programming/Tanki Extensions/research";
-const CURRENT_BUILD = "main.f1de53fa.js";
 
 // discover() המשוגר, כמו שהוא
 const ctx = vm.createContext({ console });
@@ -19,21 +18,6 @@ vm.runInContext(
   { filename: "discover.js" },
 );
 const discover = vm.runInContext("window.TankiQoL.AdvisorDiscover.discover", ctx);
-
-// ה-SEED מתוך probe.js
-const probeSrc = fs.readFileSync(
-  path.join(EXT, "features/advisor/recon/game/probe.js"),
-  "utf8",
-);
-const seedStart = probeSrc.indexOf("const SEED = {");
-const seed = eval(
-  "(" +
-    probeSrc.slice(
-      probeSrc.indexOf("{", seedStart),
-      probeSrc.indexOf("};", seedStart) + 1,
-    ) +
-    ")",
-);
 
 const KEYS = ["battleUsers", "battleStatistics", "localBattleUserState", "user"];
 
@@ -60,16 +44,6 @@ for (const b of fs
   );
   if (missing.length) console.log("       missing:", missing.join(", "));
   ok ? pass++ : fail++;
-
-  if (b === CURRENT_BUILD) {
-    const mismatches = KEYS.filter((k) => seed[k] !== r[k]).map(
-      (k) => `${k}: seed=${seed[k]} real=${r[k]}`,
-    );
-    console.log(
-      `       SEED matches this build: ${mismatches.length ? "NO !!" : "YES"}`,
-    );
-    mismatches.forEach((x) => console.log("         " + x));
-    if (mismatches.length) fail++;
-  }
 }
 console.log(`\n${pass} passed, ${fail} failed`);
+process.exit(fail ? 1 : 0);

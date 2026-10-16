@@ -8,7 +8,7 @@
   const P = (window.TankiQoL.HudParse = window.TankiQoL.HudParse || {});
 
   // גרסת הפלט; עולה יחד עם CACHE_VERSION ב-detect.js
-  const V = 12;
+  const V = 15;
 
   // enum של סלוט -> אייקון; אוגמנט = סלוט ריק
   const SLOT_ICON = {
@@ -91,13 +91,19 @@
     parts.supplies = { default: rBox, centered: cBox };
   }
 
-  // {v, game, kinds, covered, layouts, assets} — או null
-  function discover(src) {
+  // ל-MAIN: השמות ומיפוי אתרי ההוספה; נשלח לפני שאר הגילוי
+  function discoverGame(src) {
     const names = P.engine(src);
     if (!names) return null;
-    // ל-MAIN: השמות, ומיפוי אתרי ההוספה לרכיבים
     const { factory, nodeAdd, nodeRemove, ...engine } = names;
-    const game = { names: engine, offsets: P.offsets(src, names) };
+    return { names, game: { names: engine, offsets: P.offsets(src, names) } };
+  }
+
+  // {v, game, kinds, covered, layouts, assets} — או null; first = discoverGame
+  function discover(src, first) {
+    const pre = first || discoverGame(src);
+    if (!pre) return null;
+    const { names, game } = pre;
     const kinds = P.strategyKinds(src, names);
     if (!kinds) return { v: V, game };
     const call = P.paramsCall(src, kinds);
@@ -110,6 +116,7 @@
       bars: tank && tank.bars,
       effects: tank && tank.effects,
       chat: P.chat(src, kinds),
+      killLog: P.killLog(src, kinds, names),
       status: P.status(src, kinds, call),
     };
     const covered = () => Object.keys(parts).filter((id) => parts[id]);
@@ -133,5 +140,5 @@
     return { v: V, game, kinds, covered: covered(), layouts: split(parts), assets: P.assets(src) || {} };
   }
 
-  window.TankiQoL.HudDiscover = { discover };
+  window.TankiQoL.HudDiscover = { discover, discoverGame };
 })();
