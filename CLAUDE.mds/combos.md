@@ -589,7 +589,9 @@ harness checks every string of the current one exists in all of them.
 
 **A destination button, without a dependency.** `GO = {to, text}` names a
 destination; the button shows only if some feature has called
-`WhatsNewModal.provide(to, run)`. 5.0 announces the HUD editor, and
+`WhatsNewModal.provide(to, run)`. 5.0 announces the HUD editor (v5.1 keeps
+`NEWS_VERSION` at `5.0` so nobody sees it twice — `hud.md` → "Pointing users
+at the editor" covers those who dismissed it unread), and
 `features/hud/main.js` provides `hudEditor` — the game's own navigation to
 Settings → Controls, then the editor (`hud.md` → "Getting there from the news
 popup"). With a destination, "got it" turns secondary and the destination is the
@@ -605,8 +607,14 @@ the game if they differ.
 - **Every way out counts as acknowledged** — the X, either button, the backdrop
   and Escape all route through `hide()`, which marks it seen. Anything else
   leaves users with a popup that keeps coming back.
-- **The lobby button's yellow badge reads the same flag**, so dismissing the
-  modal clears the badge too; `hide()` calls `LobbyButtonInjector.refreshBadge()`
+- **The lobby button's yellow badge reads the same flag** — plus one more
+  condition: `wantsBadge()` is "unseen, **or** the announced destination is
+  still waiting". A feature passes that check as `provide`'s third argument;
+  the HUD passes "its banner is still up" (`HudNews.bannerPending()`, see
+  `hud.md` → "Pointing users at the editor"), so in 5.x the badge stays until
+  the editor is opened or the banner's X is clicked, not just until the modal
+  is closed. Combos still
+  depends on nothing. Dismissing the modal clears the badge when nothing waits; `hide()` calls `LobbyButtonInjector.refreshBadge()`
   so it goes away without waiting for a re-render. The flag is cached in memory
   because `inject()` runs on every mutation batch and must not hit storage that
   often — while it is still loading, `isUnseen()` reports false, so the badge

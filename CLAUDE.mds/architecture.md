@@ -87,7 +87,7 @@ loads.** Within block 5 the order is:
    without `layout.js`, which block 3d already loaded); bridge, store; `dom/` —
    catalog, markup, ghost; then `model/rects.js`, which reads the ghost; `dom/apply.js`; `editor/` — shapes,
    `stage_rules.js` before `stage.js`, drag, topbar, viewport, `editor_screen.js`,
-   settings button; `main.js`
+   settings button; `news/` — state, dots, banner; `main.js`
 
 Every discovery block starts with `shared/bundle.js`, which its `detect.js`
 registers with. Block 3d (the HUD discovery) is then `layout.js`, then `read.js`
@@ -116,6 +116,7 @@ a feature must not scatter loose generic keys into it.
 | `local` | `garageConstants:v<N>:<bundle url>` | combos | cached per-build discovery result |
 | `local` | `advisorFields:v<N>:<bundle url>` | advisor | cached per-build trap fields |
 | `local` | `hudLayout` | HUD editor | per-layout element preferences + the measured geometry (shape in `hud.md`) |
+| `local` | `hudNews` | HUD editor | `{visited, bannerClosed}` — the pointers to the editor (`hud.md` → "Pointing users at the editor") |
 | `local` | `hudGame:v<N>:<bundle url>` | HUD editor | cached per-build names + add sites (what MAIN gets) |
 | `local` | `hudRecipes:v<N>:<bundle url>` | HUD editor | cached per-build geometry discovery |
 | `local` | `hudNavigation:v<N>:<bundle url>` | HUD editor | cached per-build way to Settings → Controls (export-table keys + source heads) |
@@ -300,8 +301,9 @@ features/advisor/              # recommended protections — see advisor.md
     └── protection_panel.css
 
 features/hud/                  # the battle HUD editor — see hud.md
-├── main.js                    # injects the editor button while Settings is open; the news button's destination
-├── store.js                   # the one storage key: hudLayout
+├── main.js                    # injects the editor button while Settings is open; the news button's destination; syncs news/
+├── store.js                   # the layout's storage key: hudLayout
+├── news/                      # yellow dots + combos-tab banner pointing at the editor, until first opened
 ├── model/                     # pure — catalogue, geometry, replay, push, overlap, undo
 ├── discovery/                 # names, add sites, geometry and the way to Settings → Controls (TankiQoL.HudParse)
 ├── capture/game/              # [MAIN] the HUD root, the layout, the measurements, the Kotlin export tables

@@ -114,7 +114,7 @@
       this.refreshBadge();
     },
 
-    // הבאדג' תלוי בדגל של "מה חדש"; נקרא גם כשהמודל נסגר.
+    // הבאדג' לפי "מה חדש" והיעד שלו; נקרא גם כשהמודל נסגר.
     // פריט flex ולא absolute: ההורה של המשחק חותך חריגות.
     // בסוף שורת התמונות ולא בשורה החיצונית — שם space-between היה
     // גורר את התמונות למרכז.
@@ -124,7 +124,7 @@
       const row = button.querySelector(".cme_lobby-combo-images-container");
       if (!row) return;
       const news = window.TankiQoL.WhatsNewModal;
-      const want = !!(news && news.isUnseen());
+      const want = !!(news && news.wantsBadge());
       const existing = row.querySelector(".cme_new-badge");
       if (want && !existing) {
         const badge = document.createElement("div");

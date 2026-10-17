@@ -5,7 +5,7 @@
 
   **Quality-of-life browser extension for Tanki Online**
 
-  [![Version](https://img.shields.io/badge/version-5.0-blue.svg)](manifest.json)
+  [![Version](https://img.shields.io/badge/version-5.1-blue.svg)](manifest.json)
   [![Manifest](https://img.shields.io/badge/manifest-v3-green.svg)](manifest.json)
 
 </div>
@@ -117,7 +117,9 @@ The game gives you two HUD layouts and nothing in between. This lets you place
 each piece where you want it.
 
 - **Open it from the game's own Settings** → Controls → **HUD EDITOR**, or
-  straight from the one-time update note, whose button takes you there. The
+  straight from the one-time update note, whose button takes you there. Until
+  you have opened it once, yellow dots mark the way and a small banner under
+  the combos' import/export buttons links to it. The
   editor replaces the settings screen with a placeholder version of the battle
   screen, the way the mobile client's control editor works.
 - **Drag to move, two sliders to resize (50-300%) and fade (0-100%)** — the
@@ -168,8 +170,8 @@ each piece where you want it.
 
 **[➜ Install from the Chrome Web Store](https://chromewebstore.google.com/detail/tanki-online-combo-manage/aodkeckgccekmgmeddikfjgfnomalacm)**
 
-> **Updating from an older version?** v5.0 asks for **no new permissions** (nor
-> did v4.0 or v4.1), so nothing needs re-approving. (If you are coming from before v3.0, that release
+> **Updating from an older version?** v5.1 asks for **no new permissions** (nor
+> did v4.0, v4.1 or v5.0), so nothing needs re-approving. (If you are coming from before v3.0, that release
 > added chat translation and did need permission for the translation service —
 > Chrome disables an extension until such a permission is approved. Click the
 > extensions (puzzle 🧩) icon in your toolbar and accept it; it happens once.)
@@ -378,7 +380,8 @@ internals at all — and `bundle.js` does that reading once for all of them.
 │   │   ├── dom/               # the HUD elements the game draws in HTML
 │   │   ├── bridge/            # its own pipe between the worlds
 │   │   ├── model/             # pure: the element catalogue and the geometry
-│   │   └── editor/            # the editor screen opened from the game's Settings
+│   │   ├── editor/            # the editor screen opened from the game's Settings
+│   │   └── news/              # yellow dots + a banner pointing to the editor until first opened
 │   └── translator/
 │       ├── isolated/          # bridge.js, detect.js
 │       ├── main/              # chat.js, translate.js, settings.js, skiplist.js, toggle.js, gamesettings.js
@@ -449,9 +452,13 @@ least one non-English game locale if you touched UI or selectors.
 
 ### Version history
 
+**v5.1** — Until the HUD editor has been opened once, yellow dots and a small
+banner in the combos tab point the way to it. No new permissions.
+
 **v5.0** — Added the battle HUD editor: move, resize and fade each element of
 the battle screen, with a separate arrangement for each of the game's two HUD
-layouts, edited from the game's own Settings. No new permissions.
+layouts, edited from the game's own Settings. A one-time update note announces
+it, with a button that opens it. No new permissions.
 
 **v4.1** — Repaired chat translation after the translation endpoint started
 refusing the extension's requests.

@@ -17,6 +17,9 @@
     // שמות מחלקה לכפתור החזרה של עורך ה-HUD
     BACK_BUTTON_CLASS: "BreadcrumbsComponentStyle-backButton",
     BACK_ARROW_CLASS: "IconStyle-iconBackArrow",
+    // כרטיסיות התפריט; CONTROLS חמישית לפי סדר הקוד של המשחק
+    SETTINGS_MENU_ITEM: ".SettingsMenuComponentStyle-menuItemOptions",
+    SETTINGS_CONTROLS_INDEX: 4,
 
     // --- ה-HUD של הקרב ב-HTML (שמות מחלקה; העותק לובש cme_) ---
     HUD: {
@@ -158,6 +161,7 @@
     GARAGE_BUTTON:
       ".PrimaryMenuItemComponentStyle-menuItemContainer .PrimaryMenuItemComponentStyle-itemLiGarage", // כפתור המוסך במסך הראשי
     MENU_ITEM_CONTAINER: ".PrimaryMenuItemComponentStyle-menuItemContainer", // קונטיינר של פריט בתפריט הראשי
+    LOBBY_SETTINGS_ITEM: ".PrimaryMenuItemComponentStyle-itemLiOption", // אייקון ההגדרות; ההורה הוא הקונטיינר
 
     // --- רנדומייזר: זיהוי רמת נדירות אוגמנטים ---
     AUGMENT_CATEGORY_LEGENDARY:

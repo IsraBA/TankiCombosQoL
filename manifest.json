@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Tanki Online — Combos & QoL",
-  "version": "5.0",
+  "version": "5.1",
   "description": "Quality-of-life tools for Tanki Online: save and switch full equipment combos in one click, and translate battle chat in real time.",
   "permissions": ["storage"],
   "host_permissions": [
@@ -34,6 +34,7 @@
         "features/hud/editor/editor.css",
         "features/hud/editor/frame.css",
         "features/hud/editor/skeletons.css",
+        "features/hud/news/news.css",
         "features/translator/main/gamesettings.css"
       ],
       "run_at": "document_start"
@@ -254,6 +255,9 @@
         "features/hud/editor/viewport.js",
         "features/hud/editor/editor_screen.js",
         "features/hud/editor/settings_button.js",
+        "features/hud/news/state.js",
+        "features/hud/news/dots.js",
+        "features/hud/news/banner.js",
         "features/hud/main.js"
       ],
       "run_at": "document_idle"

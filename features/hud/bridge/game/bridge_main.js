@@ -11,6 +11,12 @@
     window.postMessage({ __hud: true, dir: "m2i", action, payload }, "*");
   }
 
+  // עוזר קונסול: הדגל ב-chrome.storage, ולכן רק שולחים ל-ISOLATED
+  NS.resetNews = function (force) {
+    post("hudNewsReset", { force: !!force });
+    return "asked the extension to clear the HUD news" + (force ? " (shown even if your HUD is edited)" : "");
+  };
+
   let lastState = "";
   function pushState() {
     let s;

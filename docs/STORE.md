@@ -18,24 +18,24 @@ The extension is already published with 500+ users, so every upload is an
   degraded to "works rarely". Backend repaired inside the existing host; the two
   dead Lingva hosts were dropped from `host_permissions`. Nothing changed in the
   dashboard.
-- **v5.0** (current) adds the **battle HUD editor**. **No new permission and no
-  new data transfer** — the arrangement is stored locally and applied on the
-  player's own screen. What changes in the dashboard: the description (a HUD
-  EDITOR section), "What's new", and three Privacy-tab texts that list what the
-  extension does (single purpose, storage, host permission). The data-use
-  disclosure is unchanged.
-- **Unreleased since v5.0** (Oct 2026): repairs for the game update `6a85fbcf`
-  (the HUD's bars and effects, the kill feed's place in the editor) and a
-  rebuilt way of finding the game's internals; the one-time update note now
-  announces the HUD editor, with a button that opens it through the game's own
-  navigation; `OD` joins the slang that is never translated. **No new
-  permission and no new data transfer** — the game script was already read
-  locally. When it ships, the version number is the developer's call, and only
+- **v5.0** (uploaded 16 Oct 2026) adds the **battle HUD editor**. **No new
+  permission and no new data transfer** — the arrangement is stored locally and
+  applied on the player's own screen. What changes in the dashboard: the
+  description (a HUD EDITOR section), "What's new", and three Privacy-tab texts
+  that list what the extension does (single purpose, storage, host permission).
+  The data-use disclosure is unchanged. The upload also carried the repairs for
+  the game update `6a85fbcf` and the one-time update note announcing the HUD
+  editor (`NEWS_VERSION` `5.0`), with a button that opens it — the manifest
+  stayed `5.0` through those commits.
+- **v5.1** (current, Oct 2026): until the HUD editor is opened once, yellow
+  dots (lobby Settings → CONTROLS → HUD EDITOR, and the COMBOS button's badge) and a banner in the combos tab
+  point to it, for players who dismissed the note unread. **No new permission
+  and no new data transfer** — the two new flags are local storage. Only
   "What's new" needs text.
 
 ## 1. Read this first: what changes for existing users
 
-**v4.0, v4.1 and v5.0 grant no new permission.** `permissions` is unchanged and
+**v4.0, v4.1, v5.0 and v5.1 grant no new permission.** `permissions` is unchanged and
 `host_permissions` only ever *shrank* — the two dead Lingva hosts were dropped
 when the translation backend was repaired (Sep 2026); `translate.googleapis.com`
 is the sole remaining translation host. Dropping a host is not a privilege
@@ -67,10 +67,14 @@ description.
 
 In-extension, v4.0 announced itself: opening the COMBOS tab after the update
 showed a one-time note of what changed, and the lobby button carried a badge
-until it was seen. **v5.0 does not** — `NEWS_VERSION` in
-`view/panels/whats_new_modal.js` is still `4.0`, so users who saw the v4.0 note
-see nothing new. If the HUD editor should be announced in game, that is a new
-`NEWS_VERSION` plus a new `LINES` entry in all 11 languages.
+until it was seen. **v5.0 announces the HUD editor** the same way:
+`NEWS_VERSION` in `view/panels/whats_new_modal.js` is `5.0`, with a **Take me
+there** button that opens the editor. **v5.1 keeps it at `5.0` on purpose** —
+raising it would show the same note again to everyone who already saw it.
+Because a popup is easy to dismiss unread, v5.1 adds yellow dots (lobby
+Settings → CONTROLS → HUD EDITOR) and a small banner in the combos tab that keep
+pointing at the editor until it has been opened once — hidden from anyone whose
+HUD is already edited (`CLAUDE.mds/hud.md` → "Pointing users at the editor").
 
 ## 2. The "Store listing" tab
 
@@ -146,7 +150,13 @@ come back:
   covers an extension that reads and redraws battle chat and reads the battle
   roster.
 
-### "What's new" field for v5.0  (current upload — draft, review before pasting)
+### "What's new" field for v5.1  (current upload — draft, review before pasting)
+
+```
+The HUD editor is now easier to find: yellow markers (Settings - Controls - HUD EDITOR) and a small banner in the combos tab point the way until you have opened it once. Already using it? Nothing changes for you. No new permissions.
+```
+
+### "What's new" field for v5.0  (already published — kept for reference)
 
 ```
 New: a HUD editor. Move, resize and fade every element of the battle screen - radar, kill feed, supplies, health bars, chat and more - from the game's own Settings - Controls - HUD EDITOR. The default and centered layouts each keep their own arrangement, everything saves as you go, and only your screen changes. No new permissions.
@@ -193,8 +203,10 @@ and only affect featuring.
 
 ## 3. The "Privacy" tab, field by field
 
-**v5.0 changes the three texts below**, which list what the extension does and
-now include the HUD editor (drafts — review before pasting). The dashboard's
+**v5.0 changed the three texts below**, which list what the extension does and
+now include the HUD editor (drafts — review before pasting). **v5.1 changes none
+of them** — the editor pointers are UI, and their two flags are local
+preferences, already covered by the storage text. The dashboard's
 Privacy tab has **one** justification box for host permissions — not one per
 host — so its text covers both hosts together. Each block is sized to fit its
 1,000-character limit.
@@ -233,7 +245,7 @@ equipment and scores, which sounds like it should — but it is read from state 
 game already sent to this browser, used to render a panel, and never transmitted,
 so it is not *collected* data in the dashboard's sense. Nothing new to tick.
 **v5.0 changes nothing here either**: the HUD arrangement is the user's own
-preference, kept in local storage and never sent anywhere.
+preference, kept in local storage and never sent anywhere. Nor does v5.1.
 
 The declaration, as set at v3.0 and still correct:
 

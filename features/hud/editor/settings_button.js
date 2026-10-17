@@ -24,6 +24,8 @@
   }
 
   window.TankiQoL.HudSettingsButton = {
+    MARK,
+
     inject() {
       const row = findRow();
       if (!row) return false;

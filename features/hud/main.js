@@ -1,6 +1,6 @@
 // features/hud/main.js  [ISOLATED world]
 
-// מחבר את העורך לדף: הכפתור בהגדרות, סגירה כשהמסך נעלם, ויעד להודעה על הגרסה.
+// מחבר את העורך לדף: הכפתור בהגדרות, סגירה, יעד להודעה, וההפניות אליו.
 (function () {
   "use strict";
 
@@ -28,9 +28,12 @@
     send();
   })();
 
-  // ההודעה על הגרסה מובילה לעורך; הקומבו לא תלוי בנו
+  // ההודעה מובילה לעורך; הבאדג' שלה הולך עם הבאנר (X מכבה את שניהם)
   const news = window.TankiQoL.WhatsNewModal;
-  if (news) news.provide("hudEditor", () => window.TankiQoL.HudSettingsButton.goTo());
+  if (news) {
+    news.provide("hudEditor", () => window.TankiQoL.HudSettingsButton.goTo(),
+      () => !!window.TankiQoL.HudNews && window.TankiQoL.HudNews.bannerPending());
+  }
 
   setInterval(() => {
     const Q = window.TankiQoL;
@@ -43,5 +46,14 @@
 
     // המשחק ניווט החוצה (Z, כפתור חזרה) בזמן שהעורך פתוח
     if (editor.isOpen() && !document.querySelector(DOM.NOT_IN_GAME_CONTAINER)) editor.close();
+
+    // ההפניות אל העורך נעלמות אחרי הכניסה הראשונה
+    if (Q.HudNews) {
+      if (editor.isOpen()) Q.HudNews.markVisited();
+      Q.HudNewsDots.sync();
+      Q.HudNewsBanner.sync();
+      // הבאדג' על כפתור COMBOS בלובי תלוי גם במצב שלנו
+      if (Q.LobbyButtonInjector) Q.LobbyButtonInjector.refreshBadge();
+    }
   }, CHECK_MS);
 })();

@@ -81,7 +81,8 @@ The zip lands in `build/dist/tanki-combos-qol-v<version>.zip`.
 7. **Update notice**: on a profile that has not seen this `NEWS_VERSION`, the
    lobby COMBOS button carries a yellow badge and the modal opens on the first
    entry to the tab. Closing it any way (X, either button, backdrop, Escape)
-   clears both, permanently. `TankiQoL.WhatsNewModal.reset()` replays it. Its
+   marks it seen, permanently; the badge stays until the HUD editor has been
+   opened or the HUD banner's X clicked (unless the HUD is already edited). `TankiQoL.WhatsNewModal.reset()` replays it. Its
    **Take me there** button closes it, opens Settings straight on the Controls
    tab (no click walk through the lobby) and then the HUD editor; leaving the
    editor and then Settings brings you back to the garage **on the combos tab**,
@@ -91,6 +92,13 @@ The zip lands in `build/dist/tanki-combos-qol-v<version>.zip`.
    lobby COMBOS button, the **C** key, and entering the garage with auto-open on.
    One press of back must leave — a press that seems to do nothing, or reopens
    the tab, is the regression in `combos.md` → "Getting to the combos tab".
+   **HUD pointers**: on a profile with an unedited HUD (`__HUD.resetNews(true)`
+   on your own), the badge on the lobby COMBOS button, a yellow dot on the lobby Settings item, on CONTROLS (same
+   height as ACCOUNT's dot), on the HUD EDITOR button's top-right corner, and
+   the banner under import/export. The lobby dot must match the quests' dot
+   exactly. The banner's X hides it and the COMBOS badge, not the
+   Settings dots; a click anywhere else on it goes to
+   the editor; once the editor has been open, all of it is gone for good.
 8. **HUD editor** — the geometry comes from the game's code, so no battle is
    needed first:
    - on a fresh profile, Settings → Controls → HUD EDITOR: every element is

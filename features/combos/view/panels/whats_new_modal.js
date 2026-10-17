@@ -15,6 +15,8 @@
   // היעד של "קח אותי לשם" מגיע מפיצ'ר אחר; אין תלות בו
   const GO = { to: "hudEditor", text: "whatsNewTakeMe" };
   const destinations = {};
+  // היעד עוד מחכה למשתמש (למשל לא נכנס אליו); מחזיק את הבאדג'
+  const waiting = {};
 
   // null = טרם נקרא. הכפתור בלובי נבנה מחדש תדיר, ולכן נשמר בזיכרון.
   let seen = null;
@@ -39,13 +41,20 @@
       return seen === false;
     },
 
+    // הבאדג' בלובי: עד שנצפה, ועד שהיעד הפסיק לחכות
+    wantsBadge() {
+      const pending = GO && waiting[GO.to];
+      return this.isUnseen() || !!(pending && pending());
+    },
+
     isOpen() {
       return showing;
     },
 
     // run() נקרא אחרי שהמודל נסגר; בלי יעד אין כפתור
-    provide(to, run) {
+    provide(to, run, pending) {
       destinations[to] = run;
+      if (pending) waiting[to] = pending;
     },
 
     // נקרא בכל פתיחה של הכרטיסייה; מציג לכל היותר פעם אחת

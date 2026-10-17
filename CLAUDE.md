@@ -18,9 +18,10 @@ discovery runs on. Keep it that way — a new feature is a new folder under
 `features/`, not additions to an existing one. Two deliberate exceptions, both
 one-way: the advisor equips through combos' own path rather than reimplement it,
 and the HUD editor reads combos' `lib/constants.js` for its game selectors (the
-project keeps every game selector in that one file) and provides the destination
-of the "what's new" popup's button (`WhatsNewModal.provide`). Combos depends on
-**neither**.
+project keeps every game selector in that one file), provides the destination
+of the "what's new" popup's button and what keeps its lobby badge lit
+(`WhatsNewModal.provide`), and places its "new feature" banner under combos'
+import/export row (`features/hud/news/`). Combos depends on **neither**.
 
 ## Read this first
 
@@ -87,7 +88,7 @@ says exactly which one that is. Do not load them all.
   MAIN), `window.__ADV` (battle probe, MAIN), `window.__HUD` (HUD editor, MAIN).
 - **CSS prefix**: every class the extension creates starts with `cme_`.
 - **Storage**: one key per feature. `savedCombos` and friends in `local`,
-  `hudLayout` in `local`, `translator` in `sync`.
+  `hudLayout` (and the small `hudNews` flags) in `local`, `translator` in `sync`.
 - **Testing** is the offline harnesses in `build/harnesses/` (`node <file>.js`,
   see rule 9) plus a manual pass in the game — the checklist is in
   `CLAUDE.mds/store.md`. Anything needing a real account or a live battle is

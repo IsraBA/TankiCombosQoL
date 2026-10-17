@@ -44,6 +44,8 @@ __HUD.debug;       // {captures, adds, removes, settingsCaptures, serviceCapture
 //  layoutCalls, renderCalls, measures, names: null|"bundle", lastError}
 __HUD.internals.N; // the minified names in use — all null until discovery answers
 __HUD.openControls();               // Settings → Controls the game's way (the news button's MAIN half)
+__HUD.resetNews();                  // bring back the yellow dots + combos banner (hidden if your HUD is edited)
+__HUD.resetNews(true);              // …and show them even on an edited HUD, until reload
 __HUD.internals.kotlinTables.length; // Kotlin export tables seen at startup — 0 means $_$ was armed too late
 
 // HUD editor — ISOLATED side
@@ -206,6 +208,13 @@ way the extension does):
   flag so only one runs, that nothing is ever clicked because it reappeared after
   the user left (the eaten back-press), and the one-shot request that brings the
   tab back when the HUD editor is left.
+- **`test_hud_news.js`** — the pointers to the editor: the three dots on the
+  right hosts (CONTROLS by index), wearing only `cme_` classes (no game class in
+  `news.css` either), the banner under the import/export row, a click anywhere
+  on it going to the editor, X closing the banner and (through
+  `main.js`'s `provide`) the COMBOS lobby badge but not the dots, everything gone for good once
+  the editor was open, nothing for an edited HUD (either layout) or before
+  storage loads, and `__HUD.resetNews()` / `(true)` through the MAIN relay.
 - **`test_hud_navigate.js`** — the same navigation in both worlds, on fake Kotlin
   modules: the `$_$` trap armed with no names and recording each table, a
   stranger module with the same keys first in line and never used, a request

@@ -225,6 +225,22 @@ ok("before reset: seen", env.M.isUnseen() === false);
   await new Promise((r) => setTimeout(r, 0));
   ok("…which then runs once", went === 1);
 
+  // ---- הבאדג' בלובי: עד שנצפה, ועד שהיעד מפסיק לחכות ----
+
+  ok("seen, and the destination gave no 'waiting' check: no badge", env.M.wantsBadge() === false);
+  let waiting = true;
+  env.M.provide(env.M._internals.GO.to, () => {}, () => waiting);
+  ok("seen, but the destination still waits: the badge stays", env.M.wantsBadge() === true);
+  waiting = false;
+  ok("…and goes once it stops waiting", env.M.wantsBadge() === false);
+  env = makeEnv({});
+  env.M.provide("someOtherPlace", () => {}, () => true);
+  env.M.markSeen();
+  ok("only the announced destination can hold the badge", env.M.wantsBadge() === false);
+  env = makeEnv({});
+  env.M.provide(env.M._internals.GO.to, () => {}, () => false);
+  ok("unseen alone still wants it", env.M.wantsBadge() === true);
+
   // ---- כל מחרוזת של ההודעה קיימת בכל 11 השפות ----
 
   const lm = { console: { log() {} } };

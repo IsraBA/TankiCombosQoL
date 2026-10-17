@@ -72,7 +72,12 @@ features/hud/
 │   ├── editor.css            #   the screen, the header bar, the viewport
 │   ├── frame.css             #   a shape's frame: selected, invalid, locked; the guides
 │   └── skeletons.css         #   the skeletons' own parts
-└── main.js                   injects the button, keeps MAIN's pivots current, provides the news destination
+├── news/                     [ISOLATED] pointers to the editor until it is first opened
+│   ├── state.js              #   HudNews: the hudNews flags + "the HUD is already edited"
+│   ├── dots.js               #   HudNewsDots: lobby Settings → CONTROLS → HUD EDITOR
+│   ├── banner.js             #   HudNewsBanner: under combos' import/export row, with an X
+│   └── news.css              #   the dots' drawing and the banner
+└── main.js                   injects the button, keeps MAIN's pivots current, provides the news destination, syncs news/
 ```
 
 ## The two kinds of HUD element
@@ -754,6 +759,68 @@ HUD → combos, the same way as the HUD's use of combos' selectors and of
 
 `__HUD.openControls()` runs the MAIN half alone, from the console.
 
+## Pointing users at the editor (`news/`)
+
+The 5.0 popup is easy to miss, so until the editor is opened once there is a
+trail of yellow dots — the lobby's **Settings** item, then the **CONTROLS** tab,
+then the top-right corner of our **HUD EDITOR** button — the COMBOS button's
+badge in the garage lobby, and a small banner
+under combos' import/export buttons ("New feature available — HUD editor"
+and an X). The whole banner but the X is the link: it runs
+`HudSettingsButton.goTo()`.
+
+- **The COMBOS button's badge in the garage lobby goes with the banner**: it
+  used to go out when the 5.0 popup was closed; now it stays lit while
+  `HudNews.bannerPending()`, through the third argument of
+  `WhatsNewModal.provide` (combos.md → "The 'what's new' modal"). The badge
+  leads into the combos tab, where the banner is, so the banner's X answers
+  both (the developer's call); the Settings trail stays until the editor.
+  `main.js`'s loop calls `LobbyButtonInjector.refreshBadge()` so it goes out at
+  once.
+- **Gone for good once the editor has been open**: `main.js`'s 300 ms loop calls
+  `HudNews.markVisited()` whenever `HudEditor.isOpen()`. The X closes the
+  banner and the COMBOS badge (its own flag); the Settings dots stay until the
+  editor is opened.
+- **Never shown to someone who already uses it.** The feature shipped before
+  the pointers did, so if any element in either layout is off its default (an
+  entry exists in `hudLayout` — equal-to-default entries are deleted, so that
+  is exactly "reset would do something") nothing is shown. Not sticky: reset
+  everything without ever having opened the editor since, and they return —
+  in practice impossible, since resetting means opening the editor.
+- **5.0 kept no "visited" flag.** Someone who opened the editor in 5.0 and
+  changed nothing counts as never having opened it, and sees the pointers
+  again after updating to 5.1 until they open it (or click the X). Anyone who
+  changed something is covered by the rule above.
+- **No flash**: nothing shows until both `hudNews` and `hudLayout` have loaded.
+- **Every dot copies the game's, value for value.** Read from the bundle
+  (`6a85fbcf`), not guessed: a primary-menu item is
+  `li.itemCommonLi.menuItemContainer` holding the item's div (`itemLiOption` for
+  Settings) and, with `hasNotification`, an
+  `<img class="notificationIconNewNews" src=Ellipse.svg>` — the quests' dot.
+  Ours restates that class's rules with Ellipse.svg rebuilt in CSS, as combos'
+  lobby badge does. The CONTROLS dot copies the one the game puts on ACCOUNT
+  (`ItemNotificationMarkerStyle-base -right`, plus its hashed `top: 2.35em`).
+  The button's dot (centred on its top-right corner) and the banner's take the
+  lobby look, not the CONTROLS one — the developer's call. The lobby dot's halo
+  is `!important`: the game's `itemCommonLi:hover div` paints every div in the
+  item white, and its own dot escapes only by being an `<img>`.
+  **The dots wear no game class.** The first version put the game's classes on
+  them so the game would position them, and in the live game the CONTROLS and
+  button dots were invisible and the lobby one looked wrong. The likely cause
+  (not confirmed live): the game injects a style's rules only once it renders
+  that style itself, so on a profile with no such notification the classes
+  had no rules at all.
+  `news.css` carries every value; the harness fails on a game class in it.
+  CONTROLS is found by **index 4** — the settings menu's order in
+  the game's code (`GAME, BATTLE, GRAPHIC, SOUND, CONTROL, …`), confirmed in all
+  three settings captures in `HTML-examples/`; the tab names are localized, so
+  text is not an option.
+- **Dependency still HUD → combos**: the banner finds `.cme_import-export-row`
+  and appends itself to its parent; combos knows nothing about it.
+- `__HUD.resetNews()` clears both flags from the page console (MAIN relays
+  `hudNewsReset`, like `__CMB.resetWhatsNew()`); `__HUD.resetNews(true)` also
+  ignores an edited HUD until the next reload, for testing on your own profile.
+
 ## Storage
 
 One key, `local.hudLayout`:
@@ -788,6 +855,7 @@ default is deleted rather than stored.
 | `m2i` | `hudMeasure` | a measurement record | pushed after a battle lays the HUD out |
 | `m2i` | `hudMeasureResult` | `{id, ok, record}` | reply |
 | `m2i` | `hudControlsResult` | `{id, ok, error}` | reply; none for a request dropped after waiting 10 s for discovery |
+| `m2i` | `hudNewsReset` | `{force}` | dev helper `__HUD.resetNews()`; not a reply — `news/state.js` listens for it itself |
 
 ## Behaviours not to regress
 
